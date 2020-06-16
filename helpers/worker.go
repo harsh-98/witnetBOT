@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/harsh-98/witnetBOT/log"
 	"github.com/spf13/viper"
 )
 
@@ -47,26 +47,24 @@ func (w *WitnetConnector) QueryRPC(msg string) RespObj {
 	return v
 }
 
-var Nodes = []NodeType{}
-
 func (w *WitnetConnector) ProcessAndUpdateDB(resp RespObj) {
 	if resp.Result == nil || resp.Error != nil {
-		log.Errorf("%v", resp)
+		log.Logger.Errorf("%v", resp)
 		return
 	}
 	result := resp.Result
 	switch result.(type) {
 	case map[string]interface{}:
-		nodes := []NodeType{}
+		var nodes map[string]*NodeType
 		for k, v := range result.(map[string]interface{}) { // use type assertion to loop over map[string]interface{}
 			n := NodeType{
 				NodeID:     k,
 				Active:     v.([]interface{})[1].(bool),
 				Reputation: v.([]interface{})[0].(float64),
 			}
-			nodes = append(nodes, n)
+			nodes[n.NodeID] = &n
 		}
-		Nodes = nodes
+		global.Nodes = nodes
 		DB.AddNodesInTable(nodes)
 	}
 }
@@ -81,12 +79,12 @@ func QueryWorker(vip *viper.Viper) {
 		case <-done:
 			return
 		case _ = <-timer.C:
-			log.Debug("timer")
+			log.Logger.Debug("timer")
 			resp := witnet.QueryRPC(`{"jsonrpc": "2.0","method": "getReputationAll", "id": "1"}`)
 			witnet.ProcessAndUpdateDB(resp)
 			timer.Stop()
 		case _ = <-ticker.C:
-			log.Debug("ticker")
+			log.Logger.Debug("ticker")
 			resp := witnet.QueryRPC(`{"jsonrpc": "2.0","method": "getReputationAll", "id": "1"}`)
 			witnet.ProcessAndUpdateDB(resp)
 

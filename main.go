@@ -1,25 +1,11 @@
 package main
 
 import (
-	"flag"
-	"os"
-
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/harsh-98/witnetBOT/helpers"
-	log "github.com/sirupsen/logrus"
+	"github.com/harsh-98/witnetBOT/log"
 	"github.com/spf13/viper"
 )
-
-func initLoad() {
-	debug := flag.Bool("debug", false, "for debugging")
-	flag.Parse()
-	log.SetOutput(os.Stdout)
-	if *debug {
-		log.SetLevel(log.DebugLevel)
-	} else {
-		log.SetLevel(log.InfoLevel)
-	}
-}
 
 func readConfig(defaults map[string]interface{}) *viper.Viper {
 	v := viper.New()
@@ -32,22 +18,22 @@ func readConfig(defaults map[string]interface{}) *viper.Viper {
 	v.SetConfigType("yaml")
 	err := v.ReadInConfig()
 	if err != nil {
-		log.Fatalf("Err in loading config file %s", err)
+		log.Logger.Fatalf("Err in loading config file %s", err)
 	}
 	return v
 }
 func main() {
-	initLoad()
+
 	var defaults map[string]interface{}
 	v := readConfig(defaults)
 
 	err := helpers.DB.Init(v)
 	if err != nil {
-		log.Fatal("Unable to connect to database")
+		log.Logger.Fatal("Unable to connect to database")
 	}
 	defer helpers.DB.Close()
 
-	helpers.TgBot, _ = tgbotapi.NewBotAPI(helpers.TgBotToken)
+	helpers.TgBot, _ = tgbotapi.NewBotAPI(v.GetString("tgToken"))
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60
 	go helpers.QueryWorker(v)

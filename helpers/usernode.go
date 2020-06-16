@@ -3,7 +3,7 @@ package helpers
 import (
 	"fmt"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/harsh-98/witnetBOT/log"
 )
 
 type UserNode struct {
@@ -13,19 +13,16 @@ type UserNode struct {
 
 func (d DataBaseType) RemoveUserNode(nodeID string, userID int64) error {
 	str := fmt.Sprintf("delete from UserNodeMap where NodeID = '%s' and UserID = %v", nodeID, userID)
-	log.Debug(str)
+	log.Logger.Debug(str)
 	_, err := sqldb.Exec(str)
 	if err != nil {
 		fmt.Println("Error removing node from DB")
 		return err
 	}
-	for i, u := range global.Users {
-		if u.UserID == userID {
-			for j, n := range global.Users[i].Nodes {
-				if n == nodeID {
-					global.Users[i].Nodes = append(global.Users[i].Nodes[:j], global.Users[i].Nodes[j+1:]...)
-				}
-			}
+	nodes := global.Users[userID].Nodes
+	for j, n := range nodes {
+		if n == nodeID {
+			global.Users[userID].Nodes = append(nodes[:j], nodes[j+1:]...)
 		}
 	}
 	return nil
@@ -34,12 +31,12 @@ func (d DataBaseType) AddUserNode(n UserNode) (NodeType, error) {
 	str := fmt.Sprintf("insert into userNodeMap values (%v, '%s')", n.UserID, n.NodeID)
 	_, err := sqldb.Exec(str)
 	if err != nil {
-		log.Errorf("Error adding user's %v node to DB: %s\n\r", n.NodeID, err)
+		log.Logger.Errorf("Error adding user's %v node to DB: %s\n\r", n.NodeID, err)
 		return NodeType{}, err
 	}
 	rows, err := sqldb.Query(fmt.Sprintf("select * from tblNodes where NodeID='%s'", n.NodeID))
 	if err != nil {
-		log.Error(err)
+		log.Logger.Error(err)
 		return NodeType{}, err
 	}
 	var (
@@ -59,10 +56,6 @@ func (d DataBaseType) AddUserNode(n UserNode) (NodeType, error) {
 		}
 	}
 	rows.Close()
-	for i, u := range global.Users {
-		if u.UserID == n.UserID {
-			global.Users[i].Nodes = append(u.Nodes, nodeID)
-		}
-	}
+	global.Users[n.UserID].Nodes = append(global.Users[n.UserID].Nodes, nodeID)
 	return node, nil
 }

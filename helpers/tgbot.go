@@ -5,10 +5,9 @@ import (
 	"strings"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
-	log "github.com/sirupsen/logrus"
+	"github.com/harsh-98/witnetBOT/log"
 )
 
-const TgBotToken = "1270458850:AAH7_pD89WZlB346IVBCv-qs3ahIr9a1mI8"
 const welcomeMessage = "Hello\n\r\n\r" +
 	"I am @elliotsenpai 's unofficial witnet monitor BOT and I am here to help you keep an eye on your nodes."
 const addNodeMsg = "Node's public key ? Starts with twit (Testnet: Len 43) or wit(Mainnet: Len 42)"
@@ -150,7 +149,7 @@ func sendNodeDetails(tgID int, nodeID string) {
 }
 
 func CommandReceived(update tgbotapi.Update) {
-	var dbUser UserType
+	var dbUser *UserType
 	var err error
 	dbUser, err = GetUserByTelegramID(int64(update.Message.From.ID))
 	if err == nil {
@@ -168,7 +167,7 @@ func CommandReceived(update tgbotapi.Update) {
 	} else {
 		ReportToAdmins(fmt.Sprintf("🧝‍♂️ New registered user: '%v' '%s' '%s' '%s'\n\r",
 			update.Message.From.ID, update.Message.From.UserName, update.Message.From.FirstName, update.Message.From.LastName))
-		dbUser = UserType{
+		dbUser = &UserType{
 			UserID:    int64(update.Message.From.ID),
 			UserName:  update.Message.From.UserName,
 			FirstName: update.Message.From.FirstName,
@@ -180,7 +179,7 @@ func CommandReceived(update tgbotapi.Update) {
 			ReportToAdmins("⛔️ An error occured while saving him in DB")
 			return
 		}
-		global.Users = append(global.Users, dbUser)
+		global.Users[dbUser.UserID] = dbUser
 	}
 	if update.Message.Command() == "start" { // && update.Message.Chat.IsPrivate() {
 		startCommandReceived(update.Message.From)
@@ -251,10 +250,10 @@ func mainMenu(tgUser *tgbotapi.User) {
 	dbUser.LastMenuID = resp.MessageID
 }
 
-func sendNodesStats(tgID int, dbUser UserType) {
+func sendNodesStats(tgID int, dbUser *UserType) {
 	nLen := len(dbUser.Nodes)
-	log.Debug(dbUser)
-	if len(dbUser.Nodes) == 0 {
+	log.Logger.Debug(*dbUser)
+	if dbUser == nil {
 		msg := tgbotapi.NewMessage(int64(tgID), "⛔️ No nodes added yet")
 		TgBot.Send(msg)
 		return

@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/harsh-98/witnetBOT/log"
 )
 
 type UserType struct {
@@ -17,23 +17,27 @@ type UserType struct {
 	LastMenuID int
 }
 
-func GetUserByTelegramID(tgID int64) (UserType, error) {
+// earlier var users := UserType{} wasused
+// if := the []UserType{}
+// else var Users []UserType
+func GetUserByTelegramID(tgID int64) (*UserType, error) {
 	for _, u := range global.Users {
 		if tgID == u.UserID {
 			fmt.Printf("%+v \n", tgID)
 			return u, nil
 		}
 	}
-	return UserType{}, errors.New("User not found")
+	return nil, errors.New("User not found")
 }
 
-func (d DataBaseType) AddUser(u UserType) error {
+func (d DataBaseType) AddUser(u *UserType) error {
 	str := fmt.Sprintf("insert into tblUsers values (%v, '%s', '%s', '%s', 0)", u.UserID, u.UserName, u.FirstName, u.LastName)
 	_, err := sqldb.Exec(str)
 	if err != nil {
-		log.Errorf("Error adding user to DB: %s\n\r", err)
+		log.Logger.Errorf("Error adding user to DB: %s\n\r", err)
 		return err
 	}
+	global.Users[u.UserID] = u
 	// rows, err := sqldb.Query("select * from tblUsers order by UserID desc limit 1")
 	// if err != nil {
 	// 	log.Error(err)
@@ -55,7 +59,7 @@ func (d DataBaseType) AddUser(u UserType) error {
 func (d DataBaseType) GetUsers() {
 	rows, err := sqldb.Query("select * from tblUsers")
 	if err != nil {
-		log.Errorf("Error fetching users from DB: %s\n\r", err)
+		log.Logger.Errorf("Error fetching users from DB: %s\n\r", err)
 		return
 	}
 	var (
@@ -67,7 +71,7 @@ func (d DataBaseType) GetUsers() {
 	)
 	for rows.Next() {
 		err := rows.Scan(&userID, &tgUserName, &tgFirstName, &tgLastName, &isAdmin)
-		log.Infof("Adding nodes for userid: %v", userID)
+		log.Logger.Infof("Adding nodes for userid: %v", userID)
 		if err == nil {
 			user := UserType{
 				UserID:    userID,
@@ -87,21 +91,22 @@ func (d DataBaseType) GetUsers() {
 			)
 			for rows2.Next() {
 				err2 := rows2.Scan(&nodeID)
-				log.Debugf("Add %s for %v", nodeID, userID)
+				log.Logger.Debugf("Add %s for %v", nodeID, userID)
 				if err2 == nil {
 					user.Nodes = append(user.Nodes, nodeID)
 				}
 			}
 			rows2.Close()
-			log.Debugf("Len of users %v", len(global.Users))
-			global.Users = append(global.Users, user)
-			log.Debugf("Len of users %v", len(global.Users))
+			log.Logger.Debugf("Len of users %v", len(global.Users))
+			log.Logger.Debugf("%v", user)
+			global.Users[user.UserID] = &user
+			log.Logger.Debugf("Len of users %v", len(global.Users))
 		}
 	}
 	rows.Close()
 }
 
-func (d DataBaseType) UpdateUser(u UserType) error {
+func (d DataBaseType) UpdateUser(u *UserType) error {
 	str := fmt.Sprintf("update tblUsers set UserName = '%s', FirstName ='%s', LastName = '%s' where UserID = %v",
 		u.UserName, u.FirstName, u.LastName, u.UserID)
 	_, err := sqldb.Exec(str)

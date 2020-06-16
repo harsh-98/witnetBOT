@@ -6,7 +6,7 @@ import (
 
 	"github.com/go-sql-driver/mysql"
 	_ "github.com/go-sql-driver/mysql"
-	log "github.com/sirupsen/logrus"
+	"github.com/harsh-98/witnetBOT/log"
 	"github.com/spf13/viper"
 )
 
@@ -16,8 +16,8 @@ type dataBaseInterface interface {
 	Init(vip *viper.Viper) error
 	Close()
 	GetUsers() error
-	AddUser(u UserType) error
-	UpdateUser(u UserType) error
+	AddUser(u *UserType) error
+	UpdateUser(u *UserType) error
 	RemoveUserNode(nodeID string, userID int64) error
 	AddUserNode(n UserNode) (NodeType, error)
 }
@@ -46,7 +46,7 @@ func (d DataBaseType) Init(vip *viper.Viper) error {
 	// https://pkg.go.dev/github.com/go-sql-driver/mysql?tab=doc#NewConnector
 	connector, err := mysql.NewConnector(config)
 	if err != nil {
-		log.Error(err)
+		log.Logger.Error(err)
 	}
 	// earlier sql.Open was used
 	// https://github.com/golang/go/blob/go1.14.4/src/database/sql/sql.go#L745
