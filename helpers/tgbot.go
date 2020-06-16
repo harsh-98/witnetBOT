@@ -53,9 +53,9 @@ func ReplyReceived(message *tgbotapi.Message) {
 			UserID: int64(dbUser.UserID),
 			NodeID: key,
 		}
-		node, err := DB.AddUserNode(userNode)
+		err = DB.AddUserNode(userNode)
 		if err == nil {
-			dbUser.Nodes = append(dbUser.Nodes, node.NodeID)
+			// dbUser.Nodes = append(dbUser.Nodes, node.NodeID)
 			msg := tgbotapi.NewMessage(int64(message.From.ID), "✅ Node added")
 			TgBot.Send(msg)
 		} else {

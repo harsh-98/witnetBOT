@@ -39,7 +39,7 @@ func (d DataBaseType) Init(vip *viper.Viper) error {
 	config.DBName = vip.GetString("dbName")
 
 	// MultiStatement for handling multiple query batch
-	config.MultiStatements = vip.GetBool("multipleStatment")
+	config.MultiStatements = vip.GetBool("multipleStatement")
 	config.Net = vip.GetString("net")
 	config.Addr = vip.GetString("addr")
 

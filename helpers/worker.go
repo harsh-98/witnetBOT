@@ -55,7 +55,7 @@ func (w *WitnetConnector) ProcessAndUpdateDB(resp RespObj) {
 	result := resp.Result
 	switch result.(type) {
 	case map[string]interface{}:
-		var nodes map[string]*NodeType
+		nodes := make(map[string]*NodeType)
 		for k, v := range result.(map[string]interface{}) { // use type assertion to loop over map[string]interface{}
 			n := NodeType{
 				NodeID:     k,
@@ -71,8 +71,8 @@ func (w *WitnetConnector) ProcessAndUpdateDB(resp RespObj) {
 
 func QueryWorker(vip *viper.Viper) {
 	witnet := WitnetConnector{Address: vip.GetString("servAddr")}
-	timer := time.NewTimer(5000 * time.Second)
-	ticker := time.NewTicker(60 * 10 * time.Second)
+	timer := time.NewTimer(time.Duration(vip.GetInt("timer")) * time.Second)
+	ticker := time.NewTicker(time.Duration(vip.GetInt("ticker")) * 10 * time.Second)
 	done := make(chan bool)
 	for {
 		select {

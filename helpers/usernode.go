@@ -27,35 +27,35 @@ func (d DataBaseType) RemoveUserNode(nodeID string, userID int64) error {
 	}
 	return nil
 }
-func (d DataBaseType) AddUserNode(n UserNode) (NodeType, error) {
+func (d DataBaseType) AddUserNode(n UserNode) error {
 	str := fmt.Sprintf("insert into userNodeMap values (%v, '%s')", n.UserID, n.NodeID)
 	_, err := sqldb.Exec(str)
 	if err != nil {
 		log.Logger.Errorf("Error adding user's %v node to DB: %s\n\r", n.NodeID, err)
-		return NodeType{}, err
+		return err
 	}
-	rows, err := sqldb.Query(fmt.Sprintf("select * from tblNodes where NodeID='%s'", n.NodeID))
-	if err != nil {
-		log.Logger.Error(err)
-		return NodeType{}, err
-	}
-	var (
-		node       NodeType
-		active     bool
-		reputation float64
-		blocks     int32
-		nodeID     string
-	)
-	for rows.Next() {
-		rows.Scan(&nodeID, &active, &reputation, &blocks)
-		node = NodeType{
-			NodeID:     nodeID,
-			Blocks:     blocks,
-			Reputation: reputation,
-			Active:     active,
-		}
-	}
-	rows.Close()
-	global.Users[n.UserID].Nodes = append(global.Users[n.UserID].Nodes, nodeID)
-	return node, nil
+	// rows, err := sqldb.Query(fmt.Sprintf("select * from tblNodes where NodeID='%s'", n.NodeID))
+	// if err != nil {
+	// 	log.Logger.Error(err)
+	// 	return err
+	// }
+	// var (
+	// 	node       NodeType
+	// 	active     bool
+	// 	reputation float64
+	// 	blocks     int32
+	// 	nodeID     string
+	// )
+	// for rows.Next() {
+	// 	rows.Scan(&nodeID, &active, &reputation, &blocks)
+	// 	node = NodeType{
+	// 		NodeID:     nodeID,
+	// 		Blocks:     blocks,
+	// 		Reputation: reputation,
+	// 		Active:     active,
+	// 	}
+	// }
+	// rows.Close()
+	global.Users[n.UserID].Nodes = append(global.Users[n.UserID].Nodes, n.NodeID)
+	return nil
 }

@@ -24,7 +24,9 @@ func readConfig(defaults map[string]interface{}) *viper.Viper {
 }
 func main() {
 
-	var defaults map[string]interface{}
+	defaults := make(map[string]interface{})
+	defaults["timer"] = 60
+	defaults["ticker"] = 10
 	v := readConfig(defaults)
 
 	err := helpers.DB.Init(v)
