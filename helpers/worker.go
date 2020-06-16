@@ -4,11 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
-	"os"
 	"strings"
 	"time"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 )
 
 type RespObj struct {
@@ -20,8 +20,6 @@ type RespObj struct {
 type WitnetConnector struct {
 	Address string
 }
-
-var service = os.ExpandEnv("$SERVADDR")
 
 func (w *WitnetConnector) QueryRPC(msg string) RespObj {
 	if !strings.HasSuffix(msg, "\n") {
@@ -73,8 +71,8 @@ func (w *WitnetConnector) ProcessAndUpdateDB(resp RespObj) {
 	}
 }
 
-func QueryWorker() {
-	witnet := WitnetConnector{Address: service}
+func QueryWorker(vip *viper.Viper) {
+	witnet := WitnetConnector{Address: vip.GetString("servAddr")}
 	timer := time.NewTimer(5000 * time.Second)
 	ticker := time.NewTicker(60 * 10 * time.Second)
 	done := make(chan bool)

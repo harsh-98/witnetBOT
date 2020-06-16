@@ -13,7 +13,7 @@ import (
 var sqldb *sql.DB = nil
 
 type dataBaseInterface interface {
-	Init() error
+	Init(vip *viper.Viper) error
 	Close()
 	GetUsers() error
 	AddUser(u UserType) error
@@ -28,20 +28,20 @@ type DataBaseType struct {
 
 var DB DataBaseType
 
-func (d DataBaseType) Init() error {
+func (d DataBaseType) Init(vip *viper.Viper) error {
 	var err error = nil
 	// https://github.com/go-sql-driver/mysql/blob/v1.5.0/dsn.go#L68
 	var config = mysql.NewConfig()
 
 	// https://pkg.go.dev/github.com/go-sql-driver/mysql?tab=doc#Config
-	config.User = viper.Get("user")
-	config.Passwd = viper.Get("passwd")
-	config.DBName = viper.Get("dbName")
+	config.User = vip.GetString("user")
+	config.Passwd = vip.GetString("passwd")
+	config.DBName = vip.GetString("dbName")
 
 	// MultiStatement for handling multiple query batch
-	config.MultiStatements = viper.Get("multipleStatment")
-	config.Net = viper.Get("net")
-	config.Addr = viper.Get("addr")
+	config.MultiStatements = vip.GetBool("multipleStatment")
+	config.Net = vip.GetString("net")
+	config.Addr = vip.GetString("addr")
 
 	// https://pkg.go.dev/github.com/go-sql-driver/mysql?tab=doc#NewConnector
 	connector, err := mysql.NewConnector(config)

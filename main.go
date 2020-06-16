@@ -5,7 +5,7 @@ import (
 	"os"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
-	"github.com/harsh-98/witnetbot/helpers"
+	"github.com/harsh-98/witnetBOT/helpers"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
@@ -20,20 +20,28 @@ func initLoad() {
 		log.SetLevel(log.InfoLevel)
 	}
 }
-func loadConfig() {
-	viper.SetConfigName(".witnetbot")
-	viper.SetConfigType("yaml")
-	viper.AddConfigPath(os.ExpandEnv("$HOME"))
-	viper.AddConfigPath(os.ExpandEnv("$PWD"))
-	err := viper.ReadInConfig() // Find and read the config file
-	if err != nil {             // Handle errors reading the config file
-		log.Fatal("Err in loading config file %s", err)
+
+func readConfig(defaults map[string]interface{}) *viper.Viper {
+	v := viper.New()
+	for key, value := range defaults {
+		v.SetDefault(key, value)
 	}
+	v.AddConfigPath(".")
+	v.AddConfigPath("$HOME")
+	v.SetConfigName(".witnet")
+	v.SetConfigType("yaml")
+	err := v.ReadInConfig()
+	if err != nil {
+		log.Fatalf("Err in loading config file %s", err)
+	}
+	return v
 }
 func main() {
 	initLoad()
+	var defaults map[string]interface{}
+	v := readConfig(defaults)
 
-	err := helpers.DB.Init()
+	err := helpers.DB.Init(v)
 	if err != nil {
 		log.Fatal("Unable to connect to database")
 	}
@@ -42,7 +50,7 @@ func main() {
 	helpers.TgBot, _ = tgbotapi.NewBotAPI(helpers.TgBotToken)
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60
-	go helpers.QueryWorker()
+	go helpers.QueryWorker(v)
 
 	updates, _ := helpers.TgBot.GetUpdatesChan(u)
 	// go helpers.GetHeartBeat()

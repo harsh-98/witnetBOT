@@ -1,4 +1,4 @@
-module github.com/DrDelphi/BonBot2
+module github.com/harsh-98/witnetBOT
 
 go 1.13
 
