@@ -20,7 +20,7 @@ func (d *DataBaseType) AddNodesInTable(nodes map[string]*NodeType) error {
 		query = fmt.Sprintf("%s INSERT INTO tblNodes (NodeID, Active, Reputation, Blocks) VALUES('%v', %t, %v, %v) ON DUPLICATE KEY UPDATE Active=%t, Reputation=%v;\n",
 			query, node.NodeID, node.Active, node.Reputation, node.Blocks, node.Active, node.Reputation)
 	}
-	log.Logger.Debug(query)
+	// log.Logger.Debug(query)
 	_, err := sqldb.Exec(query)
 	if err != nil {
 		log.Logger.Errorf("Error adding nodes to DB: %s\n\r", err)
@@ -30,7 +30,7 @@ func (d *DataBaseType) AddNodesInTable(nodes map[string]*NodeType) error {
 }
 
 func (d DataBaseType) GetNodes() error {
-	rows, err := sqldb.Query("select * from tblNodes")
+	rows, err := sqldb.Query("select * from tblNodes order by Reputation desc")
 	if err != nil {
 		log.Logger.Errorf("Error fetching nodes from DB: %s\n\r", err)
 		return nil
@@ -43,6 +43,7 @@ func (d DataBaseType) GetNodes() error {
 	)
 	// with := {} is appended, is var is used then var nodes map[string]*NodeType
 	nodes := map[string]*NodeType{}
+	var nodeRepSort NodeRepSort
 	for rows.Next() {
 		err := rows.Scan(&nodeID, &active, &reputation, &blocks)
 
@@ -50,14 +51,17 @@ func (d DataBaseType) GetNodes() error {
 			log.Logger.Errorf("Error reading node row  from  DB: %s\n\r", err)
 			continue
 		}
-		nodes[nodeID] = &NodeType{
+		n := NodeType{
 			NodeID:     nodeID,
 			Active:     active,
 			Reputation: reputation,
 			Blocks:     blocks,
 		}
+		nodes[nodeID] = &n
+		nodeRepSort = append(nodeRepSort, n)
 	}
 	log.Logger.Infof("Adding %v nodes", len(nodes))
 	global.Nodes = nodes
+	global.Ranking = nodeRepSort
 	return nil
 }

@@ -2,6 +2,7 @@
 
 import (
 	"fmt"
+	"math"
 	"strings"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
@@ -110,7 +111,7 @@ func CallbackQueryReceived(cb *tgbotapi.CallbackQuery) {
 	}
 	if cb.Data == "LeaderBoard" {
 		TgBot.AnswerCallbackQuery(tgbotapi.NewCallback(cb.ID, "Leader Board"))
-		sendLeaderBoard(cb.From.ID)
+		sendLeaderBoard(int64(cb.From.ID))
 	}
 	if cb.Data[0] == ':' {
 		TgBot.AnswerCallbackQuery(tgbotapi.NewCallback(cb.ID, "Ok"))
@@ -284,83 +285,32 @@ func sendNodesStats(tgID int, dbUser *UserType) {
 		}
 	}
 }
+func checkUsersNode(v string, list []string) bool {
+	for _, n := range list {
+		if n == v {
+			return true
+		}
+	}
+	return false
+}
+func sendLeaderBoard(tgID int64) {
+	nLen := len(global.Ranking)
 
-func sendLeaderBoard(tgID int) {
-	msg := tgbotapi.NewMessage(int64(tgID), "")
+	str := fmt.Sprintf("🏆 **Leader Board** (Nodes count: %v) \n\n", nLen)
+
+	first3 := int(math.Min(3, float64(nLen)))
+	fmt.Println(first3)
+	for i := 0; i < first3; i++ {
+		medal := []string{"🥇", "🥈", "🥉"}
+		str += fmt.Sprintf("`%s %v - %s\n\rReputation: %v\n\r`\n\n", medal[i], i+1, global.Ranking[i].NodeID, global.Ranking[i].Reputation)
+	}
+	for i := 3; i < nLen; i++ {
+		if checkUsersNode(global.Ranking[i].NodeID, global.Users[tgID].Nodes) {
+			str += fmt.Sprintf("`%v - %s\n\rReputation: %v\n\r`\n\n", i+1, global.Ranking[i].NodeID, global.Ranking[i].Reputation)
+		}
+	}
+	msg := tgbotapi.NewMessage(int64(tgID), str)
 	msg.ParseMode = "markdown"
 	TgBot.Send(msg)
-	// top := make([]int, len(NetworkConfig.InitialNodes))
-	// for i, _ := range NetworkConfig.InitialNodes {
-	// 	top[i] = i
-	// }
-	// w := true
-	// idx := 0
-	// var tmp int
-	// for {
-	// 	var sum1, val1, sum2, val2 float64 = 0, 0, 0, 0
-	// 	sum1 = float64(NetworkConfig.InitialNodes[top[idx]].Hb.TotalUpTimeSec) + float64(NetworkConfig.InitialNodes[top[idx]].Hb.TotalDownTimeSec)
-	// 	if sum1 != 0 {
-	// 		val1 = float64(NetworkConfig.InitialNodes[top[idx]].Hb.TotalUpTimeSec) / sum1
-	// 	}
-	// 	sum2 = float64(NetworkConfig.InitialNodes[top[idx+1]].Hb.TotalUpTimeSec) + float64(NetworkConfig.InitialNodes[top[idx+1]].Hb.TotalDownTimeSec)
-	// 	if sum2 != 0 {
-	// 		val2 = float64(NetworkConfig.InitialNodes[top[idx+1]].Hb.TotalUpTimeSec) / sum2
-	// 	}
-	// 	if val1 < val2 {
-	// 		tmp = top[idx]
-	// 		top[idx] = top[idx+1]
-	// 		top[idx+1] = tmp
-	// 		w = false
-	// 	}
-	// 	idx++
-	// 	if idx >= len(top)-2 {
-	// 		if w {
-	// 			break
-	// 		} else {
-	// 			w = true
-	// 			idx = 0
-	// 		}
-	// 	}
-	// }
-	// msg := tgbotapi.NewMessage(int64(tgID), "<b>🏆 Leader Board</b>")
-	// msg.ParseMode = "HTML"
-	// TgBot.Send(msg)
-	// for i := 0; i < 5; i++ {
-	// 	shard := fmt.Sprintf("%v", NetworkConfig.InitialNodes[top[i]].Hb.ReceivedShard)
-	// 	if NetworkConfig.InitialNodes[top[i]].Hb.ReceivedShard == 4294967295 {
-	// 		shard = "meta"
-	// 	}
-	// 	str := fmt.Sprintf("`#%v %s - shard %s\n\r%s\n\rUp:%v Down:%v`", i+1,
-	// 		NetworkConfig.InitialNodes[top[i]].Hb.NodeDisplayName,
-	// 		shard,
-	// 		NetworkConfig.InitialNodes[top[i]].Address,
-	// 		NetworkConfig.InitialNodes[top[i]].Hb.TotalUpTimeSec,
-	// 		NetworkConfig.InitialNodes[top[i]].Hb.TotalDownTimeSec)
-	// 	msg := tgbotapi.NewMessage(int64(tgID), str)
-	// 	msg.ParseMode = "markdown"
-	// 	TgBot.Send(msg)
-	// }
-	// dbUser, err := GetUserByTelegramID(uint32(tgID))
-	// if err != nil {
-	// 	return
-	// }
-	// for i := 5; i < len(top); i++ {
-	// 	for _, n := range *dbUser.Nodes {
-	// 		if NetworkConfig.InitialNodes[top[i]].Address == n.BalancesKey {
-	// 			shard := fmt.Sprintf("%v", NetworkConfig.InitialNodes[top[i]].Hb.ReceivedShard)
-	// 			if NetworkConfig.InitialNodes[top[i]].Hb.ReceivedShard == 4294967295 {
-	// 				shard = "meta"
-	// 			}
-	// 			str := fmt.Sprintf("`#%v %s - shard %s\n\r%s\n\rUp:%v Down:%v`", i+1,
-	// 				NetworkConfig.InitialNodes[top[i]].Hb.NodeDisplayName,
-	// 				shard,
-	// 				NetworkConfig.InitialNodes[top[i]].Address,
-	// 				NetworkConfig.InitialNodes[top[i]].Hb.TotalUpTimeSec,
-	// 				NetworkConfig.InitialNodes[top[i]].Hb.TotalDownTimeSec)
-	// 			msg := tgbotapi.NewMessage(int64(tgID), str)
-	// 			msg.ParseMode = "markdown"
-	// 			TgBot.Send(msg)
-	// 		}
-	// 	}
-	// }
+
 }

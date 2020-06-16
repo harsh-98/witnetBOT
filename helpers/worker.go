@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+	"sort"
 	"strings"
 	"time"
 
@@ -19,6 +20,19 @@ type RespObj struct {
 }
 type WitnetConnector struct {
 	Address string
+}
+
+// {} with type
+type NodeRepSort []NodeType
+
+func (s NodeRepSort) Len() int {
+	return len(s)
+}
+func (s NodeRepSort) Swap(i, j int) {
+	s[i], s[j] = s[j], s[i]
+}
+func (s NodeRepSort) Less(i, j int) bool {
+	return s[i].Reputation > s[j].Reputation
 }
 
 func (w *WitnetConnector) QueryRPC(msg string) RespObj {
@@ -56,6 +70,7 @@ func (w *WitnetConnector) ProcessAndUpdateDB(resp RespObj) {
 	switch result.(type) {
 	case map[string]interface{}:
 		nodes := make(map[string]*NodeType)
+		var nodeRepSort NodeRepSort
 		for k, v := range result.(map[string]interface{}) { // use type assertion to loop over map[string]interface{}
 			n := NodeType{
 				NodeID:     k,
@@ -63,8 +78,12 @@ func (w *WitnetConnector) ProcessAndUpdateDB(resp RespObj) {
 				Reputation: v.([]interface{})[0].(float64),
 			}
 			nodes[n.NodeID] = &n
+			nodeRepSort = append(nodeRepSort, n)
 		}
+		sort.Sort(nodeRepSort)
 		global.Nodes = nodes
+		global.Ranking = nodeRepSort
+		// log.Logger.Debugf("%+v", global.Ranking)
 		DB.AddNodesInTable(nodes)
 	}
 }
@@ -72,7 +91,7 @@ func (w *WitnetConnector) ProcessAndUpdateDB(resp RespObj) {
 func QueryWorker(vip *viper.Viper) {
 	witnet := WitnetConnector{Address: vip.GetString("servAddr")}
 	timer := time.NewTimer(time.Duration(vip.GetInt("timer")) * time.Second)
-	ticker := time.NewTicker(time.Duration(vip.GetInt("ticker")) * 10 * time.Second)
+	ticker := time.NewTicker(time.Duration(vip.GetInt("ticker")) * 60 * time.Second)
 	done := make(chan bool)
 	for {
 		select {
