@@ -94,10 +94,10 @@ func CallbackQueryReceived(cb *tgbotapi.CallbackQuery) {
 		TgBot.Send(msg)
 		return
 	}
-	if cb.Data == "Download" {
+	if cb.Data == "RatingGraph" {
 		TgBot.AnswerCallbackQuery(tgbotapi.NewCallback(cb.ID, "Download. Please Wait !"))
-		fileable := tgbotapi.NewDocumentUpload(int64(cb.From.ID), "node.zip")
-		TgBot.Send(fileable)
+		GenerateGraph(int64(cb.From.ID))
+
 	}
 	if cb.Data == "Broadcast" {
 		TgBot.AnswerCallbackQuery(tgbotapi.NewCallback(cb.ID, "Broadcast message"))
@@ -226,7 +226,7 @@ func mainMenu(tgUser *tgbotapi.User) {
 				tgbotapi.NewInlineKeyboardButtonData("🏆 Leader Board", "LeaderBoard"),
 			),
 			tgbotapi.NewInlineKeyboardRow(
-				tgbotapi.NewInlineKeyboardButtonData("📥 Download last version", "Download"),
+				tgbotapi.NewInlineKeyboardButtonData("📈 Get Rating graph", "RatingGraph"),
 			),
 			tgbotapi.NewInlineKeyboardRow(
 				tgbotapi.NewInlineKeyboardButtonData("📣 Broadcast message", "Broadcast"),
@@ -242,7 +242,7 @@ func mainMenu(tgUser *tgbotapi.User) {
 				tgbotapi.NewInlineKeyboardButtonData("🏆 Leader Board", "LeaderBoard"),
 			),
 			tgbotapi.NewInlineKeyboardRow(
-				tgbotapi.NewInlineKeyboardButtonData("📥 Download last version", "Download"),
+				tgbotapi.NewInlineKeyboardButtonData("📈 Get Rating graph", "RatingGraph"),
 			),
 		)
 	}
@@ -302,11 +302,16 @@ func sendLeaderBoard(tgID int64) {
 	fmt.Println(first3)
 	for i := 0; i < first3; i++ {
 		medal := []string{"🥇", "🥈", "🥉"}
-		str += fmt.Sprintf("`%s %v - %s\n\rReputation: %v\n\r`\n\n", medal[i], i+1, global.Ranking[i].NodeID, global.Ranking[i].Reputation)
+		var isUserNode string
+		if checkUsersNode(global.Ranking[i].NodeID, global.Users[tgID].Nodes) {
+			isUserNode = "(Your node)"
+		}
+		str += fmt.Sprintf("`%s\n\r%s %v - %s\n\rReputation: %v \n\r`\n\n", isUserNode, medal[i], i+1, global.Ranking[i].NodeID, global.Ranking[i].Reputation)
 	}
+	isUserNode := "(Your node)"
 	for i := 3; i < nLen; i++ {
 		if checkUsersNode(global.Ranking[i].NodeID, global.Users[tgID].Nodes) {
-			str += fmt.Sprintf("`%v - %s\n\rReputation: %v\n\r`\n\n", i+1, global.Ranking[i].NodeID, global.Ranking[i].Reputation)
+			str += fmt.Sprintf("`%s\n\r%v - %s\n\rReputation: %v \n\r%s`\n\n", i+1, isUserNode, global.Ranking[i].NodeID, global.Ranking[i].Reputation)
 		}
 	}
 	msg := tgbotapi.NewMessage(int64(tgID), str)

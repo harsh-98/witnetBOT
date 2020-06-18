@@ -34,6 +34,7 @@ func main() {
 		log.Logger.Fatal("Unable to connect to database")
 	}
 	defer helpers.DB.Close()
+	// helpers.GenerateGraph(676523999)
 
 	helpers.TgBot, _ = tgbotapi.NewBotAPI(v.GetString("tgToken"))
 	u := tgbotapi.NewUpdate(0)
@@ -41,7 +42,6 @@ func main() {
 	go helpers.QueryWorker(v)
 
 	updates, _ := helpers.TgBot.GetUpdatesChan(u)
-	// go helpers.GetHeartBeat()
 
 	for update := range updates {
 		if update.Message != nil {
