@@ -1,5 +1,7 @@
 package helpers
 
+import "github.com/spf13/viper"
+
 type Global struct {
 	Nodes   map[string]*NodeType
 	Users   map[int64]*UserType
@@ -15,3 +17,5 @@ var global = Global{
 }
 
 var TIMEFORMAT = "2006-01-02 15:04:05"
+
+var Config *viper.Viper

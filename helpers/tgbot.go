@@ -96,7 +96,13 @@ func CallbackQueryReceived(cb *tgbotapi.CallbackQuery) {
 	}
 	if cb.Data == "RatingGraph" {
 		TgBot.AnswerCallbackQuery(tgbotapi.NewCallback(cb.ID, "Download. Please Wait !"))
-		GenerateGraph(int64(cb.From.ID))
+		if !Config.GetBool("disableGraph") {
+			GenerateGraph(int64(cb.From.ID))
+		} else {
+			msg := tgbotapi.NewMessage(int64(cb.From.ID), "`Graphs 📈 are currently disabled ⭕️ !!`")
+			msg.ParseMode = "markdown"
+			TgBot.Send(msg)
+		}
 
 	}
 	if cb.Data == "Broadcast" {

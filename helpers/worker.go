@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/harsh-98/witnetBOT/log"
-	"github.com/spf13/viper"
 )
 
 type RespObj struct {
@@ -88,10 +87,10 @@ func (w *WitnetConnector) ProcessAndUpdateDB(resp RespObj) {
 	}
 }
 
-func QueryWorker(vip *viper.Viper) {
-	witnet := WitnetConnector{Address: vip.GetString("servAddr")}
-	timer := time.NewTimer(time.Duration(vip.GetInt("timer")) * time.Second)
-	ticker := time.NewTicker(time.Duration(vip.GetInt("ticker")) * 60 * time.Second)
+func QueryWorker() {
+	witnet := WitnetConnector{Address: Config.GetString("servAddr")}
+	timer := time.NewTimer(time.Duration(Config.GetInt("timer")) * time.Second)
+	ticker := time.NewTicker(time.Duration(Config.GetInt("ticker")) * 60 * time.Second)
 	done := make(chan bool)
 	for {
 		select {

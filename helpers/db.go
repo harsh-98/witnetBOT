@@ -28,20 +28,20 @@ type DataBaseType struct {
 
 var DB DataBaseType
 
-func (d DataBaseType) Init(vip *viper.Viper) error {
+func (d DataBaseType) Init() error {
 	var err error = nil
 	// https://github.com/go-sql-driver/mysql/blob/v1.5.0/dsn.go#L68
 	var config = mysql.NewConfig()
 
 	// https://pkg.go.dev/github.com/go-sql-driver/mysql?tab=doc#Config
-	config.User = vip.GetString("user")
-	config.Passwd = vip.GetString("passwd")
-	config.DBName = vip.GetString("dbName")
+	config.User = Config.GetString("user")
+	config.Passwd = Config.GetString("passwd")
+	config.DBName = Config.GetString("dbName")
 
 	// MultiStatement for handling multiple query batch
-	config.MultiStatements = vip.GetBool("multipleStatement")
-	config.Net = vip.GetString("net")
-	config.Addr = vip.GetString("addr")
+	config.MultiStatements = Config.GetBool("multipleStatement")
+	config.Net = Config.GetString("net")
+	config.Addr = Config.GetString("addr")
 
 	// https://pkg.go.dev/github.com/go-sql-driver/mysql?tab=doc#NewConnector
 	connector, err := mysql.NewConnector(config)

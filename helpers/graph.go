@@ -23,13 +23,13 @@ func getColors() []color.RGBA {
 	clBlue := color.RGBA{0, 0, 255, 0xff}
 	clYellow := color.RGBA{255, 255, 0, 0xff}
 	clAqua := color.RGBA{0, 255, 255, 0xff}
-	clTeal := color.RGBA{0, 127, 127, 0xff}
-	clSilver := color.RGBA{127, 127, 127, 0xff}
+	// clTeal := color.RGBA{0, 127, 127, 0xff}
+	// clSilver := color.RGBA{127, 127, 127, 0xff}
 	clFuchsia := color.RGBA{255, 0, 255, 0xff}
 	clOlive := color.RGBA{127, 127, 0, 0xff}
 	clPurple := color.RGBA{127, 0, 127, 0xff}
 	clWhite := color.RGBA{255, 255, 255, 0xff}
-	var colors = []color.RGBA{clRed, clTeal, clYellow, clAqua, clSilver, clFuchsia, clOlive, clGreen, clBlue, clPurple, clWhite}
+	var colors = []color.RGBA{clFuchsia, clOlive, clGreen, clBlue, clPurple, clRed, clWhite, clYellow, clAqua}
 	return colors
 }
 
@@ -84,7 +84,7 @@ func GenerateGraph(tgID int64) error {
 	title := "Rating"
 
 	// Total Time
-	var totalTimeInHr uint64 = 24
+	var totalTimeInHr uint64 = uint64(Config.GetInt("totalTimeInHr"))
 
 	// min and max x coordinate
 	maxX := time.Now().Unix()
@@ -201,7 +201,7 @@ func GenerateGraph(tgID int64) error {
 		t /= 60
 		t %= 60 * 24
 		text := fmt.Sprintf("%02v:%02v", t/60, t%60)
-		addLabel(gc, colors[2], text, float64(i*xDisplayCount-20)+leftMargin, height+float64(16-bottomMargin))
+		addLabel(gc, colors[7], text, float64(i*xDisplayCount-20)+leftMargin, height+float64(16-bottomMargin))
 	}
 
 	// add y axis label
@@ -209,7 +209,7 @@ func GenerateGraph(tgID int64) error {
 	for i := 0; i <= innerHeight; i++ {
 		r := int64(int(maxY-minY)*i/innerHeight) + minY
 		text := fmt.Sprintf("%v", r)
-		addLabel(gc, colors[3], text, leftMargin-float64(8*len(text)+16), height-bottomMargin-float64(i*40+16))
+		addLabel(gc, colors[8], text, leftMargin-float64(8*len(text)+16), height-bottomMargin-float64(i*40+16))
 	}
 
 	// https://github.com/llgcode/draw2d/blob/master/samples/line/line.go plot line to graph
@@ -247,11 +247,13 @@ func GenerateGraph(tgID int64) error {
 
 	// saving png file
 	os.Mkdir("graphs", os.ModePerm)
-	// fileName := fmt.Sprintf("graphs/%s-%v-%v.png", title, tgID, time.Now().Unix())
-	fileName := "graphs/a.png"
+	fileName := fmt.Sprintf("graphs/%s-%v-%v.png", title, tgID, time.Now().Unix())
+	// fileName := "graphs/a.png"
 	draw2dimg.SaveToPngFile(fileName, img)
+
 	// send message to the user
-	// fileable := tgbotapi.NewDocumentUpload(tgID, fileName)
-	// TgBot.Send(fileable)
+	fileable := tgbotapi.NewDocumentUpload(tgID, fileName)
+	TgBot.Send(fileable)
+
 	return nil
 }

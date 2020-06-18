@@ -27,19 +27,19 @@ func main() {
 	defaults := make(map[string]interface{})
 	defaults["timer"] = 60
 	defaults["ticker"] = 10
-	v := readConfig(defaults)
+	helpers.Config = readConfig(defaults)
 
-	err := helpers.DB.Init(v)
+	err := helpers.DB.Init()
 	if err != nil {
 		log.Logger.Fatal("Unable to connect to database")
 	}
 	defer helpers.DB.Close()
 	// helpers.GenerateGraph(676523999)
 
-	helpers.TgBot, _ = tgbotapi.NewBotAPI(v.GetString("tgToken"))
+	helpers.TgBot, _ = tgbotapi.NewBotAPI(helpers.Config.GetString("tgToken"))
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60
-	go helpers.QueryWorker(v)
+	go helpers.QueryWorker()
 
 	updates, _ := helpers.TgBot.GetUpdatesChan(u)
 

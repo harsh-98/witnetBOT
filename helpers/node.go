@@ -16,12 +16,13 @@ type NodeType struct {
 
 func (d *DataBaseType) AddNodesInTable(nodes map[string]*NodeType) error {
 	var query string
-	t := time.Now()
+	loc, _ := time.LoadLocation("UTC")
+	t := time.Now().In(loc)
 	log.Logger.Infof(" number of nodes: %v", len(nodes))
 	for _, node := range nodes {
 		query = fmt.Sprintf(`%s 
 		INSERT INTO tblNodes (NodeID, Active, Reputation, Blocks) VALUES('%v', %t, %v, %v) ON DUPLICATE KEY UPDATE Active=%t, Reputation=%v;
-		INSERT INTO reputation (NodeID, Reputation, CreateAt)  VALUES('%v', %v, %s);`,
+		INSERT INTO reputation (NodeID, Reputation, CreateAt)  VALUES('%v', %v, "%s");`,
 			query, node.NodeID, node.Active, node.Reputation, node.Blocks, node.Active, node.Reputation, node.NodeID, node.Reputation, t.Format(TIMEFORMAT))
 	}
 	// log.Logger.Debug(query)
