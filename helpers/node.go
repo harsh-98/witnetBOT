@@ -76,7 +76,9 @@ func (d DataBaseType) GetNodes() error {
 	return nil
 }
 
-func queryUserNode(nodeIDs []string) {
+// this functions notifies user
+// their nodes is added in reputation list
+func notifyReputationList(nodeIDs []string) {
 	ids := strings.Join(nodeIDs, "\",\"")
 	query := fmt.Sprintf("select NodeID, UserID from userNodeMap where NodeID in (\"%s\")", ids)
 	log.Logger.Debugf("query: %s", query)
