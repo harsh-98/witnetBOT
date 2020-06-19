@@ -1,0 +1,36 @@
+DROP TABLE IF EXISTS userNodeMap;
+DROP TABLE IF EXISTS tblNodes;
+DROP TABLE IF EXISTS tblUsers;
+DROP TABLE IF EXISTS reputation;
+
+CREATE TABLE tblUsers (
+    UserID int,
+	UserName varchar(255),
+    FirstName varchar(255),
+	LastName varchar(255),
+	IsAdmin bool,
+	PRIMARY KEY (UserID)
+);
+
+CREATE TABLE tblNodes (
+	NodeID  varchar(50),
+	Active bool,
+	Reputation float,
+	Blocks int,
+	PRIMARY KEY (NodeID)
+);
+CREATE TABLE reputation (
+	ID INTEGER NOT NULL AUTO_INCREMENT PRIMARY KEY,
+	NodeID  varchar(50),
+	Reputation float,
+	CreateAt TIMESTAMP DEFAULT now(),
+	FOREIGN KEY (NodeID) REFERENCES tblNodes(NodeID)
+);
+
+CREATE TABLE userNodeMap (
+	UserID int,
+	NodeID  varchar(257),
+	CONSTRAINT Mapping PRIMARY KEY (UserID,NodeID),
+	FOREIGN KEY (UserID) REFERENCES tblUsers(UserID),
+	FOREIGN KEY (NodeID) REFERENCES tblNodes(NodeID)
+);

@@ -95,7 +95,7 @@ func CallbackQueryReceived(cb *tgbotapi.CallbackQuery) {
 		return
 	}
 	if cb.Data == "RatingGraph" {
-		TgBot.AnswerCallbackQuery(tgbotapi.NewCallback(cb.ID, "Download. Please Wait !"))
+		TgBot.AnswerCallbackQuery(tgbotapi.NewCallback(cb.ID, "Downloading. Please Wait !"))
 		if !Config.GetBool("disableGraph") {
 			GenerateGraph(int64(cb.From.ID))
 		} else {
@@ -143,8 +143,10 @@ func CallbackQueryReceived(cb *tgbotapi.CallbackQuery) {
 func sendNodeDetails(tgID int, nodeID string) {
 	for _, n := range global.Nodes {
 		if n.NodeID == nodeID {
-			str := fmt.Sprintf("`NodeID: %s\n\rActive: %t\n\rReputation: %v\n\rBlock: %v\n\r`",
-				n.NodeID, n.Active, n.Reputation, n.Blocks)
+			str := fmt.Sprintf("`NodeID: %s\n\rActive: %t\n\rReputation: %v\n\r`",
+				n.NodeID, n.Active, n.Reputation)
+			// str := fmt.Sprintf("`NodeID: %s\n\rActive: %t\n\rReputation: %v\n\rBlock: %v\n\r`",
+			// 	n.NodeID, n.Active, n.Reputation, n.Blocks)
 			msg := tgbotapi.NewMessage(int64(tgID), str)
 			msg.ParseMode = "markdown"
 			TgBot.Send(msg)
@@ -270,9 +272,9 @@ func sendNodesStats(tgID int, dbUser *UserType) {
 			if n.NodeID == v {
 				var status string
 				if n.Active {
-					status = "Online ✅"
+					status = "Active ✅"
 				} else {
-					status = "Offline ⭕️"
+					status = "Not Active ⭕️"
 				}
 				str := fmt.Sprintf("`Node %v/%v - %s\n\r\n\r"+
 					"Name: %s\n\r"+
@@ -317,7 +319,7 @@ func sendLeaderBoard(tgID int64) {
 	isUserNode := "(Your node)"
 	for i := 3; i < nLen; i++ {
 		if checkUsersNode(global.Ranking[i].NodeID, global.Users[tgID].Nodes) {
-			str += fmt.Sprintf("`%s\n\r%v - %s\n\rReputation: %v \n\r%s`\n\n", i+1, isUserNode, global.Ranking[i].NodeID, global.Ranking[i].Reputation)
+			str += fmt.Sprintf("`%s\n\r%v - %s\n\rReputation: %v \n\r`\n\n", isUserNode, i+1, global.Ranking[i].NodeID, global.Ranking[i].Reputation)
 		}
 	}
 	msg := tgbotapi.NewMessage(int64(tgID), str)
