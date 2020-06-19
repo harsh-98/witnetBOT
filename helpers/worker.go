@@ -15,7 +15,7 @@ type RespObj struct {
 	JsonRPC string      `json:"jsonrpc" yaml:"jsonrpc"`
 	Result  interface{} `json:"result" yaml:"result"`
 	Error   interface{} `json:"error" yaml:"error"`
-	Id      int         `json:"id" yaml:"id"`
+	Id      string      `json:"id" yaml:"id"`
 }
 type WitnetConnector struct {
 	Address string
@@ -56,7 +56,10 @@ func (w *WitnetConnector) QueryRPC(msg string) RespObj {
 
 	var v RespObj
 	// don't use ioutils.readAll it is blocking call and waits for streaming to end
-	json.NewDecoder(conn).Decode(&v)
+	err = json.NewDecoder(conn).Decode(&v)
+	if err != nil {
+		log.Logger.Error(err)
+	}
 	return v
 }
 

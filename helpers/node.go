@@ -28,6 +28,9 @@ func (d *DataBaseType) AddNodesInTable(nodes map[string]*NodeType) error {
 			query, node.NodeID, node.Active, node.Reputation, node.Blocks, node.Active, node.Reputation, node.NodeID, node.Reputation, t.Format(TIMEFORMAT))
 	}
 	// log.Logger.Debug(query)
+	if query == "" {
+		return nil
+	}
 	_, err := sqldb.Exec(query)
 	if err != nil {
 		log.Logger.Errorf("Error adding nodes to DB: %s\n\r", err)
