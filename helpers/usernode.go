@@ -22,7 +22,9 @@ func (d DataBaseType) RemoveUserNode(nodeID string, userID int64) error {
 	nodes := global.Users[userID].Nodes
 	for j, n := range nodes {
 		if n == nodeID {
+			fmt.Println("remove")
 			global.Users[userID].Nodes = append(nodes[:j], nodes[j+1:]...)
+			return nil
 		}
 	}
 	return nil

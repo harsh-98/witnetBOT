@@ -100,6 +100,18 @@ func GenerateGraph(tgID int64) error {
 	if nLen == 0 {
 		msg := tgbotapi.NewMessage(tgID, "You haven't added nodes")
 		TgBot.Send(msg)
+		return nil
+	}
+	exitReturn := true
+	for _, v := range nodeIDs {
+		if global.Nodes[v] != nil {
+			exitReturn = false
+		}
+	}
+	if exitReturn {
+		msg := tgbotapi.NewMessage(tgID, "Your nodes are not in reputation list. I will notify if added 😄.")
+		TgBot.Send(msg)
+		return nil
 	}
 
 	// query

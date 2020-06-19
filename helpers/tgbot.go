@@ -57,7 +57,12 @@ func ReplyReceived(message *tgbotapi.Message) {
 		err = DB.AddUserNode(userNode)
 		if err == nil {
 			// dbUser.Nodes = append(dbUser.Nodes, node.NodeID)
-			msg := tgbotapi.NewMessage(int64(message.From.ID), "✅ Node added")
+			var condition string
+			if global.Nodes[userNode.NodeID] == nil {
+				condition = "but is not present in reputation list.\n\n\r\r```  I am watching 🧐 for it, will notify if added to reputation list.\n\n  Meanwhile go have some water 🚰.```"
+			}
+			msg := tgbotapi.NewMessage(int64(message.From.ID), fmt.Sprintf("✅ Node added %s", condition))
+			msg.ParseMode = "markdown"
 			TgBot.Send(msg)
 		} else {
 			msg := tgbotapi.NewMessage(int64(message.From.ID), fmt.Sprintf("Failed node with  %s doesn't exist", key))
@@ -213,7 +218,10 @@ func ReportToAdmins(message string) {
 
 func mainMenu(tgUser *tgbotapi.User) {
 	dbUser, _ := GetUserByTelegramID(int64(tgUser.ID)) //uint32
-	if dbUser.UserID == 0 {
+	if dbUser == nil {
+		msg := tgbotapi.NewMessage(int64(tgUser.ID), "Enter command `/start` for getting started with bot 🤖")
+		msg.ParseMode = "markdown"
+		TgBot.Send(msg)
 		return
 	}
 	if dbUser.LastMenuID > 0 {
@@ -262,35 +270,35 @@ func mainMenu(tgUser *tgbotapi.User) {
 func sendNodesStats(tgID int, dbUser *UserType) {
 	nLen := len(dbUser.Nodes)
 	log.Logger.Debug(*dbUser)
-	if dbUser == nil {
+	if nLen == 0 {
 		msg := tgbotapi.NewMessage(int64(tgID), "⛔️ No nodes added yet")
 		TgBot.Send(msg)
 		return
 	}
 	for i, v := range dbUser.Nodes {
-		for _, n := range global.Nodes {
-			if n.NodeID == v {
-				var status string
-				if n.Active {
-					status = "Active ✅"
-				} else {
-					status = "Not Active ⭕️"
-				}
-				str := fmt.Sprintf("`Node %v/%v - %s\n\r\n\r"+
-					"Name: %s\n\r"+
-					"Reputation: %v`", i+1, nLen, status, n.NodeID, n.Reputation)
-				var keyboard = tgbotapi.NewInlineKeyboardMarkup(
-					tgbotapi.NewInlineKeyboardRow(
-						tgbotapi.NewInlineKeyboardButtonData("📖 Details", fmt.Sprintf(":NodeDetails_%v", n.NodeID)),
-						tgbotapi.NewInlineKeyboardButtonData("⛔️ Remove", fmt.Sprintf(":RemoveNode_%v", n.NodeID)),
-					),
-				)
-				msg := tgbotapi.NewMessage(int64(tgID), str)
-				msg.ParseMode = "markdown"
-				msg.ReplyMarkup = keyboard
-				TgBot.Send(msg)
-			}
+		n := global.Nodes[v]
+		var status string
+		if n == nil {
+			return
 		}
+		if n.Active {
+			status = "Active ✅"
+		} else {
+			status = "Not Active ⭕️"
+		}
+		str := fmt.Sprintf("`Node %v/%v - %s\n\r\n\r"+
+			"Name: %s\n\r"+
+			"Reputation: %v`", i+1, nLen, status, n.NodeID, n.Reputation)
+		var keyboard = tgbotapi.NewInlineKeyboardMarkup(
+			tgbotapi.NewInlineKeyboardRow(
+				tgbotapi.NewInlineKeyboardButtonData("📖 Details", fmt.Sprintf(":NodeDetails_%v", n.NodeID)),
+				tgbotapi.NewInlineKeyboardButtonData("⛔️ Remove", fmt.Sprintf(":RemoveNode_%v", n.NodeID)),
+			),
+		)
+		msg := tgbotapi.NewMessage(int64(tgID), str)
+		msg.ParseMode = "markdown"
+		msg.ReplyMarkup = keyboard
+		TgBot.Send(msg)
 	}
 }
 func checkUsersNode(v string, list []string) bool {

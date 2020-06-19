@@ -66,6 +66,7 @@ func (w *WitnetConnector) ProcessAndUpdateDB(resp RespObj) {
 		return
 	}
 	result := resp.Result
+	var newNodes []string
 	switch result.(type) {
 	case map[string]interface{}:
 		nodes := make(map[string]*NodeType)
@@ -76,14 +77,19 @@ func (w *WitnetConnector) ProcessAndUpdateDB(resp RespObj) {
 				Active:     v.([]interface{})[1].(bool),
 				Reputation: v.([]interface{})[0].(float64),
 			}
+			if global.Nodes[n.NodeID] == nil {
+				newNodes = append(newNodes, n.NodeID)
+			}
 			nodes[n.NodeID] = &n
 			nodeRepSort = append(nodeRepSort, n)
 		}
 		sort.Sort(nodeRepSort)
 		global.Nodes = nodes
 		global.Ranking = nodeRepSort
+
 		// log.Logger.Debugf("%+v", global.Ranking)
 		DB.AddNodesInTable(nodes)
+		queryUserNode(newNodes)
 	}
 }
 
