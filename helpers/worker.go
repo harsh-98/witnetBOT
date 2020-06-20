@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/harsh-98/witnetBOT/log"
 )
 
@@ -162,26 +163,30 @@ func queryBlockchain() {
 		}
 
 		var epoch, limit int
-		limit = 10
+		limit = Config.GetInt("blockchainLimitPerQuery")
 		for rows.Next() {
 			err := rows.Scan(&epoch)
 			if err != nil {
 				log.Logger.Errorf("Error in reading blockchain: %s\n\r", err)
+				rows.Close()
 				return
 			}
 		}
+		rows.Close()
 
 		epochQuery := fmt.Sprintf(`{"jsonrpc": "2.0","method": "getBlockChain", "params": {"epoch":%v, "limit": %v}, "id": "1"}`, epoch+1, limit)
 		log.Logger.Debugf("\n%s\n\n", epochQuery)
 		resp := witnet.QueryRPC(epochQuery)
 		if resp.Error != nil {
 			log.Logger.Error(resp.Error.(string))
+			return
 		}
 		count, err := witnet.ProcessBlocks(resp)
 		if err != nil {
 			log.Logger.Error(err)
 			return
-		} else if count < limit {
+		}
+		if count < limit {
 			return
 		}
 	}
@@ -189,16 +194,12 @@ func queryBlockchain() {
 
 type RespObjBlock struct {
 	JsonRPC string      `json:"jsonrpc" yaml:"jsonrpc"`
-	Result  B           `json:"result" yaml:"result"`
+	Result  Block       `json:"result" yaml:"result"`
 	Error   interface{} `json:"error" yaml:"error"`
 	Id      string      `json:"id" yaml:"id"`
 }
+
 type Block struct {
-	Epoch float64
-	Hash  string
-	Miner string
-}
-type B struct {
 	Txs TxTypes `json:"txns" yaml:"txns"`
 }
 type TxTypes struct {
@@ -210,36 +211,55 @@ type Mint struct {
 type Transaction struct {
 	Pkh string `json:"pkh" yaml:"pkh"`
 }
+type Reward struct {
+	Miner string
+	Epoch float64
+}
 
 func (witnet *WitnetConnector) ProcessBlocks(resp RespObj) (int, error) {
 	result := resp.Result
 	epochList := result.([]interface{})
 
-	hashEpoch := make(map[string]float64)
-	var blockHash []string
+	// hashEpoch := make(map[string]float64)
+	hashToReward := make(map[string]Reward)
+	// var blockHashes []string
 	for _, v := range epochList {
 		v := v.([]interface{})
 		hash := v[1].(string)
-		hashEpoch[hash] = v[0].(float64)
-		blockHash = append(blockHash, hash)
+		hashToReward[hash] = Reward{Epoch: v[0].(float64)}
+		// blockHashes = append(blockHashes, hash)
 	}
-	log.Logger.Debugf("block hashes: %v", blockHash)
+
 	var dbQuery string
-	for _, hash := range blockHash {
+	for hash, reward := range hashToReward {
 		blockQuery := fmt.Sprintf(`{"jsonrpc": "2.0","method": "getBlock", "params": ["%s"], "id": "1"}`, hash)
 		resp := witnet.QueryRPCBlock(blockQuery)
 		result = resp.Result
 		if resp.Error != nil {
 			return 0, errors.New(resp.Error.(string))
 		}
-		pkh := result.(B).Txs.Mint.Outputs[0].Pkh
-		fmt.Printf("%+v", result.(B).Txs.Mint.Outputs[0].Pkh)
-		dbQuery += fmt.Sprintf("insert into blockchain (Epoch, Hash, Miner) values (%v, '%s' , '%s'); ", hashEpoch[hash], hash, pkh)
+		// hashToReward[hash].Miner = result.(Block).Txs.Mint.Outputs[0].Pkh
+		pkh := result.(Block).Txs.Mint.Outputs[0].Pkh
+		hashToReward[hash] = Reward{
+			Epoch: reward.Epoch,
+			Miner: pkh,
+		}
+		log.Logger.Debugf("block hashes: %s, pkh: %s", hash, pkh)
+		dbQuery += fmt.Sprintf("insert into blockchain (Epoch, Hash, Miner) values (%v, '%s' , '%s'); ", reward.Epoch, hash, pkh)
 	}
 	log.Logger.Debug(dbQuery)
 	_, err := sqldb.Exec(dbQuery)
 	if err != nil {
 		return 0, err
 	}
-	return len(blockHash), nil
+	if !Config.GetBool("disableBlockMinedNotify") {
+		for _, reward := range hashToReward {
+			for _, user := range global.NodeUsers[reward.Miner] {
+				msg := tgbotapi.NewMessage(int64(user), fmt.Sprintf("`👌%v block was mined by your node %s`", reward.Epoch, reward.Miner))
+				msg.ParseMode = "markdown"
+				TgBot.Send(msg)
+			}
+		}
+	}
+	return len(hashToReward), nil
 }

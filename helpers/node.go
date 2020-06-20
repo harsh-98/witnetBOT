@@ -70,6 +70,7 @@ func (d DataBaseType) GetNodes() error {
 		nodes[nodeID] = &n
 		nodeRepSort = append(nodeRepSort, n)
 	}
+	rows.Close()
 	log.Logger.Infof("Adding %v nodes", len(nodes))
 	global.Nodes = nodes
 	global.Ranking = nodeRepSort
@@ -99,4 +100,5 @@ func notifyReputationList(nodeIDs []string) {
 		msg.ParseMode = "markdown"
 		TgBot.Send(msg)
 	}
+	rows.Close()
 }

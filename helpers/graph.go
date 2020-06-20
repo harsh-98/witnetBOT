@@ -159,6 +159,7 @@ func GenerateGraph(tgID int64) error {
 			minY = y
 		}
 	}
+	rows.Close()
 	if len(graphData) == 0 {
 		msg := tgbotapi.NewMessage(tgID, fmt.Sprintf("Your nodes haven't been rated in last %v", graphXAxisDurationHr))
 		TgBot.Send(msg)
@@ -184,7 +185,7 @@ func GenerateGraph(tgID int64) error {
 	var bottomMargin float64 = 60
 
 	gc := draw2dimg.NewGraphicContext(img)
-	fmt.Printf("%+v\n", graphData)
+	log.Logger.Debugf("%+v\n", graphData)
 
 	draw2dkit.Rectangle(gc, 0, 0, width, height)
 	gc.SetFillColor(image.Black)
@@ -236,7 +237,7 @@ func GenerateGraph(tgID int64) error {
 		for i := 0; i < len(pointList)-1; i++ {
 			p1 := pointList[i]
 			p2 := pointList[i+1]
-			fmt.Println(p1, p2)
+			log.Logger.Debug(p1, p2)
 
 			xdiff := (width - (leftMargin + rightMargin)) / float64(maxX-minX)
 			ydiff := (height - (topMargin + bottomMargin)) / float64(maxY-minY)

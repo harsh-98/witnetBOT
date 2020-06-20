@@ -19,7 +19,7 @@ var TgBot *tgbotapi.BotAPI
 func addNodes(message *tgbotapi.Message) {
 	dbUser, err := GetUserByTelegramID(int64(message.From.ID))
 	if err != nil {
-		fmt.Printf("Unknown user TG ID = %v trying to add node %s\n\r", message.From.ID, message.Text)
+		log.Logger.Errorf("Unknown user TG ID = %v trying to add node %s\n\r", message.From.ID, message.Text)
 		return
 	}
 	processKey := strings.Split(message.Text, " ")
@@ -180,7 +180,7 @@ func sendNodeDetails(tgID int, nodeID string) {
 			NodeID: nodeID,
 		}
 	}
-	str := fmt.Sprintf("`NodeID: %s\n\rActive: %t\n\rReputation: %v\n\r`",
+	str := fmt.Sprintf("`NodeID: %s\n\r\n\rActive: %t\n\rReputation: %v\n\r`",
 		n.NodeID, n.Active, n.Reputation)
 	if !Config.GetBool("disableComplexQuery") {
 		query := fmt.Sprintf(`
@@ -188,7 +188,7 @@ func sendNodeDetails(tgID int, nodeID string) {
 				(select count(epoch) as blockCount from blockchain) as T1 
 				inner join  
 				(select group_concat(epoch) as epochs  from 
-					(select * from blockchain where Miner =  \"%s\" order by   Epoch desc limit 5) as T) as T2 on true ;`, nodeID)
+					(select * from blockchain where Miner =  "%s" order by   Epoch desc limit 5) as T) as T2 on true ;`, nodeID)
 
 		rows, err := sqldb.Query(query)
 		if err != nil {
@@ -203,7 +203,8 @@ func sendNodeDetails(tgID int, nodeID string) {
 		for rows.Next() {
 			rows.Scan(&blockCount, &epoch)
 		}
-		str += fmt.Sprintf("`BlockMinted: %v\n\rBlock submitted last 5 Epochs: %s\n\nBlock rewards : %v\n\r`",
+		rows.Close()
+		str += fmt.Sprintf("`BlockMinted: %v\n\rBlock submitted last 5 Epochs: %s\n\rBlock rewards : %v\n\r`",
 			blockCount, epoch, 500*blockCount)
 	}
 	msg := tgbotapi.NewMessage(int64(tgID), str)
@@ -369,7 +370,7 @@ func sendLeaderBoard(tgID int64) {
 	str := fmt.Sprintf("🏆 **Leader Board** (Nodes count: %v) \n\n", nLen)
 
 	first3 := int(math.Min(3, float64(nLen)))
-	fmt.Println(first3)
+	log.Logger.Error(first3)
 	for i := 0; i < first3; i++ {
 		medal := []string{"🥇", "🥈", "🥉"}
 		var isUserNode string

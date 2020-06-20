@@ -2,7 +2,6 @@ package helpers
 
 import (
 	"database/sql"
-	"fmt"
 
 	"github.com/go-sql-driver/mysql"
 	_ "github.com/go-sql-driver/mysql"
@@ -52,7 +51,7 @@ func (d DataBaseType) Init() error {
 	// https://github.com/golang/go/blob/go1.14.4/src/database/sql/sql.go#L745
 	sqldb = sql.OpenDB(connector)
 	if err != nil {
-		fmt.Println(err)
+		log.Logger.Error(err)
 		return err
 	}
 	d.GetUsers()
