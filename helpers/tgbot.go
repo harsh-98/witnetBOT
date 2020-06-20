@@ -174,19 +174,40 @@ func CallbackQueryReceived(cb *tgbotapi.CallbackQuery) {
 }
 
 func sendNodeDetails(tgID int, nodeID string) {
-	for _, n := range global.Nodes {
-		if n.NodeID == nodeID {
-			str := fmt.Sprintf("`NodeID: %s\n\rActive: %t\n\rReputation: %v\n\r`",
-				n.NodeID, n.Active, n.Reputation)
-			// str := fmt.Sprintf("`NodeID: %s\n\rActive: %t\n\rReputation: %v\n\rBlock: %v\n\r`",
-			// 	n.NodeID, n.Active, n.Reputation, n.Blocks)
-			msg := tgbotapi.NewMessage(int64(tgID), str)
-			msg.ParseMode = "markdown"
-			TgBot.Send(msg)
-			return
+	n := global.Nodes[nodeID]
+	if n == nil {
+		n = &NodeType{
+			NodeID: nodeID,
 		}
 	}
-	msg := tgbotapi.NewMessage(int64(tgID), "⛔️ Node not found")
+	str := fmt.Sprintf("`NodeID: %s\n\rActive: %t\n\rReputation: %v\n\r`",
+		n.NodeID, n.Active, n.Reputation)
+	if !Config.GetBool("disableComplexQuery") {
+		query := fmt.Sprintf(`
+			select * from 
+				(select count(epoch) as blockCount from blockchain) as T1 
+				inner join  
+				(select group_concat(epoch) as epochs  from 
+					(select * from blockchain where Miner =  \"%s\" order by   Epoch desc limit 5) as T) as T2 on true ;`, nodeID)
+
+		rows, err := sqldb.Query(query)
+		if err != nil {
+			log.Logger.Debug(err)
+			msg := tgbotapi.NewMessage(int64(tgID), "⛔️ Fetching details for Node resulted in error")
+			TgBot.Send(msg)
+		}
+		var (
+			blockCount int
+			epoch      string
+		)
+		for rows.Next() {
+			rows.Scan(&blockCount, &epoch)
+		}
+		str += fmt.Sprintf("`BlockMinted: %v\n\rBlock submitted last 5 Epochs: %s\n\nBlock rewards : %v\n\r`",
+			blockCount, epoch, 500*blockCount)
+	}
+	msg := tgbotapi.NewMessage(int64(tgID), str)
+	msg.ParseMode = "markdown"
 	TgBot.Send(msg)
 }
 
@@ -309,7 +330,10 @@ func sendNodesStats(tgID int, dbUser *UserType) {
 		log.Logger.Debug(n)
 		var status string
 		if n == nil {
-			continue
+			if !Config.GetBool("allowReputationNilNodeStats") {
+				continue
+			}
+			n = &NodeType{NodeID: v}
 		}
 		if n.Active {
 			status = "Active ✅"
