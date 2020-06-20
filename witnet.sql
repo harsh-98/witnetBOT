@@ -1,7 +1,8 @@
 DROP TABLE IF EXISTS userNodeMap;
+DROP TABLE IF EXISTS reputation;
 DROP TABLE IF EXISTS tblNodes;
 DROP TABLE IF EXISTS tblUsers;
-DROP TABLE IF EXISTS reputation;
+DROP TABLE IF EXISTS blockchain;
 
 CREATE TABLE tblUsers (
     UserID int,
@@ -25,6 +26,12 @@ CREATE TABLE reputation (
 	Reputation float,
 	CreateAt TIMESTAMP DEFAULT now(),
 	FOREIGN KEY (NodeID) REFERENCES tblNodes(NodeID)
+);
+
+CREATE TABLE blockchain (
+	Epoch INTEGER NOT NULL PRIMARY KEY,
+	Miner  varchar(50),
+	hash varchar(130)
 );
 
 CREATE TABLE userNodeMap (

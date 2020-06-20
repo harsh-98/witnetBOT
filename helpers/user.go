@@ -23,7 +23,6 @@ type UserType struct {
 func GetUserByTelegramID(tgID int64) (*UserType, error) {
 	for _, u := range global.Users {
 		if tgID == u.UserID {
-			fmt.Printf("%+v \n", tgID)
 			return u, nil
 		}
 	}
@@ -83,18 +82,20 @@ func (d DataBaseType) GetUsers() {
 			user.Nodes = []string{}
 			rows2, err2 := sqldb.Query(fmt.Sprintf("SELECT NodeID FROM userNodeMap where userNodeMap.UserID=%v;", userID))
 			if err2 != nil {
-				fmt.Printf("Error fetching nodes for user ID %v from DB: %s\n\r", userID, err2)
+				log.Logger.Errorf("Error fetching nodes for user ID %v from DB: %s\n\r", userID, err2)
 				continue
 			}
 			var (
 				nodeID string
 			)
+
 			for rows2.Next() {
 				err2 := rows2.Scan(&nodeID)
 				log.Logger.Debugf("Add %s for %v", nodeID, userID)
 				if err2 == nil {
 					user.Nodes = append(user.Nodes, nodeID)
 				}
+				global.NodeUsers[nodeID] = append(global.NodeUsers[nodeID], userID)
 			}
 			rows2.Close()
 			log.Logger.Debugf("%v", user)

@@ -28,6 +28,9 @@ func (d *DataBaseType) AddNodesInTable(nodes map[string]*NodeType) error {
 			query, node.NodeID, node.Active, node.Reputation, node.Blocks, node.Active, node.Reputation, node.NodeID, node.Reputation, t.Format(TIMEFORMAT))
 	}
 	// log.Logger.Debug(query)
+	if query == "" {
+		return nil
+	}
 	_, err := sqldb.Exec(query)
 	if err != nil {
 		log.Logger.Errorf("Error adding nodes to DB: %s\n\r", err)
@@ -67,13 +70,16 @@ func (d DataBaseType) GetNodes() error {
 		nodes[nodeID] = &n
 		nodeRepSort = append(nodeRepSort, n)
 	}
+	rows.Close()
 	log.Logger.Infof("Adding %v nodes", len(nodes))
 	global.Nodes = nodes
 	global.Ranking = nodeRepSort
 	return nil
 }
 
-func queryUserNode(nodeIDs []string) {
+// this functions notifies user if
+// their nodes is added in reputation list
+func notifyReputationList(nodeIDs []string) {
 	ids := strings.Join(nodeIDs, "\",\"")
 	query := fmt.Sprintf("select NodeID, UserID from userNodeMap where NodeID in (\"%s\")", ids)
 	log.Logger.Debugf("query: %s", query)
@@ -94,4 +100,5 @@ func queryUserNode(nodeIDs []string) {
 		msg.ParseMode = "markdown"
 		TgBot.Send(msg)
 	}
+	rows.Close()
 }

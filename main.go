@@ -27,6 +27,7 @@ func main() {
 	defaults := make(map[string]interface{})
 	defaults["timer"] = 60
 	defaults["ticker"] = 10
+	defaults["blockchainLimitPerQuery"] = 30
 	helpers.Config = readConfig(defaults)
 
 	err := helpers.DB.Init()

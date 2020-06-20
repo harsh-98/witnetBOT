@@ -3,6 +3,8 @@ package helpers
 import (
 	"fmt"
 
+	"errors"
+
 	"github.com/harsh-98/witnetBOT/log"
 )
 
@@ -16,48 +18,56 @@ func (d DataBaseType) RemoveUserNode(nodeID string, userID int64) error {
 	log.Logger.Debug(str)
 	_, err := sqldb.Exec(str)
 	if err != nil {
-		fmt.Println("Error removing node from DB")
+		log.Logger.Error("Error removing node from DB")
 		return err
 	}
+	// remove node from user's list
 	nodes := global.Users[userID].Nodes
 	for j, n := range nodes {
 		if n == nodeID {
-			fmt.Println("remove")
+			log.Logger.Debug("Remove node from user")
 			global.Users[userID].Nodes = append(nodes[:j], nodes[j+1:]...)
-			return nil
+			break
 		}
 	}
+	// remove user from node owner
+	users := global.NodeUsers[nodeID]
+	for j, u := range users {
+		if u == userID {
+			log.Logger.Debug("Remove user from node owner")
+			global.NodeUsers[nodeID] = append(users[:j], users[j+1:]...)
+			break
+		}
+	}
+
 	return nil
 }
-func (d DataBaseType) AddUserNode(n UserNode) error {
-	str := fmt.Sprintf("insert into userNodeMap values (%v, '%s')", n.UserID, n.NodeID)
+func (d DataBaseType) AddUserNode(userID int64, nodeIDs []string) error {
+	if len(nodeIDs) == 0 {
+		return errors.New("Usernode list is empty")
+	}
+	var str string
+	var report string
+	userName := global.Users[userID].UserName
+
+	for i, nodeID := range nodeIDs {
+		str = fmt.Sprintf("%s insert into userNodeMap values (%v, '%s');", str, userID, nodeID)
+		report = fmt.Sprintf("%s %v: %s\n", report, i+1, nodeID)
+	}
+	// str = fmt.Sprintf("%s insert into userNodeMap values (%v, '%s');", str, n.UserID, n.NodeID)
 	_, err := sqldb.Exec(str)
 	if err != nil {
-		log.Logger.Errorf("Error adding user's %v node to DB: %s\n\r", n.NodeID, err)
+		log.Logger.Errorf("Error adding node to DB: %s\n\r", err)
 		return err
 	}
-	// rows, err := sqldb.Query(fmt.Sprintf("select * from tblNodes where NodeID='%s'", n.NodeID))
-	// if err != nil {
-	// 	log.Logger.Error(err)
-	// 	return err
-	// }
-	// var (
-	// 	node       NodeType
-	// 	active     bool
-	// 	reputation float64
-	// 	blocks     int32
-	// 	nodeID     string
-	// )
-	// for rows.Next() {
-	// 	rows.Scan(&nodeID, &active, &reputation, &blocks)
-	// 	node = NodeType{
-	// 		NodeID:     nodeID,
-	// 		Blocks:     blocks,
-	// 		Reputation: reputation,
-	// 		Active:     active,
-	// 	}
-	// }
-	// rows.Close()
-	global.Users[n.UserID].Nodes = append(global.Users[n.UserID].Nodes, n.NodeID)
+	// send report that new nodes are needed for user
+	ReportToAdmins(fmt.Sprintf("Username: %s (ID: %v) %s", userName, userID, report))
+
+	// add node-user in global.NodeUser for searching users by nodeid
+	for _, nodeID := range nodeIDs {
+		global.NodeUsers[nodeID] = append(global.NodeUsers[nodeID], userID)
+	}
+	// add user's node in global.Users
+	global.Users[userID].Nodes = append(global.Users[userID].Nodes, nodeIDs...)
 	return nil
 }

@@ -84,11 +84,11 @@ func GenerateGraph(tgID int64) error {
 	title := "Rating"
 
 	// Total Time
-	var totalTimeInHr uint64 = uint64(Config.GetInt("totalTimeInHr"))
+	var graphXAxisDurationHr uint64 = uint64(Config.GetInt("graphXAxisDurationHr"))
 
 	// min and max x coordinate
 	maxX := time.Now().Unix()
-	minX := maxX - int64(totalTimeInHr*60*60)
+	minX := maxX - int64(graphXAxisDurationHr*60*60)
 	// get Colors
 	colors := getColors()
 
@@ -115,7 +115,7 @@ func GenerateGraph(tgID int64) error {
 	}
 
 	// query
-	query := fmt.Sprintf("select NodeID, Reputation, CreateAt from reputation where NodeID in (\"%s\") and CreateAt > DATE_SUB(NOW(), INTERVAL %v HOUR);", strings.Join(nodeIDs, "\",\""), totalTimeInHr)
+	query := fmt.Sprintf("select NodeID, Reputation, CreateAt from reputation where NodeID in (\"%s\") and CreateAt > DATE_SUB(NOW(), INTERVAL %v HOUR);", strings.Join(nodeIDs, "\",\""), graphXAxisDurationHr)
 	log.Logger.Debugf("query: %s", query)
 	rows, err := sqldb.Query(query)
 	if err != nil {
@@ -159,8 +159,9 @@ func GenerateGraph(tgID int64) error {
 			minY = y
 		}
 	}
+	rows.Close()
 	if len(graphData) == 0 {
-		msg := tgbotapi.NewMessage(tgID, fmt.Sprintf("Your nodes haven't been rated in last %v", totalTimeInHr))
+		msg := tgbotapi.NewMessage(tgID, fmt.Sprintf("Your nodes haven't been rated in last %v", graphXAxisDurationHr))
 		TgBot.Send(msg)
 		return nil
 	}
@@ -184,7 +185,7 @@ func GenerateGraph(tgID int64) error {
 	var bottomMargin float64 = 60
 
 	gc := draw2dimg.NewGraphicContext(img)
-	fmt.Printf("%+v\n", graphData)
+	log.Logger.Debugf("%+v\n", graphData)
 
 	draw2dkit.Rectangle(gc, 0, 0, width, height)
 	gc.SetFillColor(image.Black)
@@ -236,7 +237,7 @@ func GenerateGraph(tgID int64) error {
 		for i := 0; i < len(pointList)-1; i++ {
 			p1 := pointList[i]
 			p2 := pointList[i+1]
-			fmt.Println(p1, p2)
+			log.Logger.Debug(p1, p2)
 
 			xdiff := (width - (leftMargin + rightMargin)) / float64(maxX-minX)
 			ydiff := (height - (topMargin + bottomMargin)) / float64(maxY-minY)

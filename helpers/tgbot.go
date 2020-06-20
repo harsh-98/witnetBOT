@@ -11,63 +11,91 @@ import (
 
 const welcomeMessage = "Hello\n\r\n\r" +
 	"I am @elliotsenpai 's unofficial witnet monitor BOT and I am here to help you keep an eye on your nodes."
-const addNodeMsg = "Node's public key ? Starts with twit (Testnet: Len 43) or wit(Mainnet: Len 42)"
+const addNodeMsg = "Node's public key ? Starts with twit (Testnet: Len 43) or wit(Mainnet: Len 42). You can also enter multiple keys separated by space."
 const broadcastMsg = "Reply with the message you want to broadcast"
 
 var TgBot *tgbotapi.BotAPI
 
-func ReplyReceived(message *tgbotapi.Message) {
-	if message.ReplyToMessage.Text == addNodeMsg {
-		dbUser, err := GetUserByTelegramID(int64(message.From.ID))
-		if err != nil {
-			fmt.Printf("Unknown user TG ID = %v trying to add node %s\n\r", message.From.ID, message.Text)
-			return
+func addNodes(message *tgbotapi.Message) {
+	dbUser, err := GetUserByTelegramID(int64(message.From.ID))
+	if err != nil {
+		log.Logger.Errorf("Unknown user TG ID = %v trying to add node %s\n\r", message.From.ID, message.Text)
+		return
+	}
+	processKey := strings.Split(message.Text, " ")
+	var keys []string
+	// using map to handle duplicate key input from user
+	duplicateHandle := make(map[string]bool)
+	for _, k := range processKey {
+		k = strings.Trim(k, " ")
+		if k != "" {
+			duplicateHandle[k] = true
 		}
-		key := message.Text
+	}
+	for k := range duplicateHandle {
+		keys = append(keys, k)
+	}
+	log.Logger.Debug(keys)
+
+	// handle 0 keys
+	if len(keys) == 0 {
+		msg := tgbotapi.NewMessage(int64(message.From.ID), fmt.Sprintf("⛔️ Invalid key(s) %s", message.Text))
+		TgBot.Send(msg)
+		return
+	}
+	// handle invalid keys
+	for _, key := range keys {
 		if !(len(key) == 43 && strings.HasPrefix(key, "twit")) && !(len(key) == 42 && strings.HasPrefix(key, "wit")) {
-			msg := tgbotapi.NewMessage(int64(message.From.ID), "⛔️ Invalid key length")
+			msg := tgbotapi.NewMessage(int64(message.From.ID), fmt.Sprintf("⛔️ Invalid key %s \n Either wrong length or prefix ", key))
 			TgBot.Send(msg)
 			return
 		}
-		// var nKey, bKey string
-		// for _, a := range NetworkConfig.InitialNodes {
-		// 	if a.PubKey == key || a.Address == key {
-		// 		bKey = a.Address
-		// 		nKey = a.PubKey
-		// 	}
-		// }
-		// if bKey == "" || nKey == "" {
-		// 	msg := tgbotapi.NewMessage(int64(message.From.ID), "⛔️ Not a Validator key")
-		// 	TgBot.Send(msg)
-		// 	return
-		// }
-		if dbUser.Nodes != nil {
-			for _, n := range dbUser.Nodes {
+	}
+	// check if the key is present in userNodeMap
+	if dbUser.Nodes != nil {
+		for _, n := range dbUser.Nodes {
+			for _, key := range keys {
 				if n == key {
-					msg := tgbotapi.NewMessage(int64(message.From.ID), "⛔️ You have already added this key")
+					msg := tgbotapi.NewMessage(int64(message.From.ID), fmt.Sprintf("⛔️ You have already added this key %s", key))
 					TgBot.Send(msg)
 					return
 				}
 			}
+
 		}
-		var userNode = UserNode{
-			UserID: int64(dbUser.UserID),
-			NodeID: key,
-		}
-		err = DB.AddUserNode(userNode)
-		if err == nil {
-			// dbUser.Nodes = append(dbUser.Nodes, node.NodeID)
-			var condition string
-			if global.Nodes[userNode.NodeID] == nil {
-				condition = "but is not present in reputation list.\n\n\r\r```  I am watching 🧐 for it, will notify if added to reputation list.\n\n  Meanwhile go have some water 🚰.```"
+	}
+	var nodeStatus, repNodeStatus string
+	userID := int64(message.From.ID)
+	err = DB.AddUserNode(userID, keys)
+	extra := " ```   I am watching 🧐 for these nodes , will notify if added to reputation list.\n\n   Meanwhile go have some water 🚰.```"
+	if err == nil {
+		for _, key := range keys {
+			if global.Nodes[key] == nil {
+				nodeStatus += fmt.Sprintf("key: %s is not in reputation list \n", key)
+			} else {
+				repNodeStatus += fmt.Sprintf("key: %s is in reputation list \n", key)
 			}
-			msg := tgbotapi.NewMessage(int64(message.From.ID), fmt.Sprintf("✅ Node added %s", condition))
+		}
+		if repNodeStatus != "" {
+			msg := tgbotapi.NewMessage(userID, fmt.Sprintf("✅ Node(s) added!! ```\n\n%s \n```", repNodeStatus))
 			msg.ParseMode = "markdown"
 			TgBot.Send(msg)
-		} else {
-			msg := tgbotapi.NewMessage(int64(message.From.ID), fmt.Sprintf("Failed node with  %s doesn't exist", key))
+		}
+		if nodeStatus != "" {
+			msg := tgbotapi.NewMessage(userID, fmt.Sprintf("✅ Node(s) added!! But ```\n\n%s \n``` %s", nodeStatus, extra))
+			msg.ParseMode = "markdown"
 			TgBot.Send(msg)
 		}
+	} else {
+		log.Logger.Error(err)
+		msg := tgbotapi.NewMessage(userID, "Failed adding address.")
+		TgBot.Send(msg)
+		ReportToAdmins(fmt.Sprintf("Failed adding node %s from user: %v", message.Text, userID))
+	}
+}
+func ReplyReceived(message *tgbotapi.Message) {
+	if message.ReplyToMessage.Text == addNodeMsg {
+		addNodes(message)
 	}
 	if message.ReplyToMessage.Text == broadcastMsg {
 		for _, u := range global.Users {
@@ -146,19 +174,41 @@ func CallbackQueryReceived(cb *tgbotapi.CallbackQuery) {
 }
 
 func sendNodeDetails(tgID int, nodeID string) {
-	for _, n := range global.Nodes {
-		if n.NodeID == nodeID {
-			str := fmt.Sprintf("`NodeID: %s\n\rActive: %t\n\rReputation: %v\n\r`",
-				n.NodeID, n.Active, n.Reputation)
-			// str := fmt.Sprintf("`NodeID: %s\n\rActive: %t\n\rReputation: %v\n\rBlock: %v\n\r`",
-			// 	n.NodeID, n.Active, n.Reputation, n.Blocks)
-			msg := tgbotapi.NewMessage(int64(tgID), str)
-			msg.ParseMode = "markdown"
-			TgBot.Send(msg)
-			return
+	n := global.Nodes[nodeID]
+	if n == nil {
+		n = &NodeType{
+			NodeID: nodeID,
 		}
 	}
-	msg := tgbotapi.NewMessage(int64(tgID), "⛔️ Node not found")
+	str := fmt.Sprintf("`NodeID: %s\n\r\n\rActive: %t\n\rReputation: %v\n\r`",
+		n.NodeID, n.Active, n.Reputation)
+	if !Config.GetBool("disableComplexQuery") {
+		query := fmt.Sprintf(`
+			select * from 
+				(select count(epoch) as blockCount from blockchain) as T1 
+				inner join  
+				(select group_concat(epoch) as epochs  from 
+					(select * from blockchain where Miner =  "%s" order by   Epoch desc limit 5) as T) as T2 on true ;`, nodeID)
+
+		rows, err := sqldb.Query(query)
+		if err != nil {
+			log.Logger.Debug(err)
+			msg := tgbotapi.NewMessage(int64(tgID), "⛔️ Fetching details for Node resulted in error")
+			TgBot.Send(msg)
+		}
+		var (
+			blockCount int
+			epoch      string
+		)
+		for rows.Next() {
+			rows.Scan(&blockCount, &epoch)
+		}
+		rows.Close()
+		str += fmt.Sprintf("`BlockMinted: %v\n\rBlock submitted last 5 Epochs: %s\n\rBlock rewards : %v\n\r`",
+			blockCount, epoch, 500*blockCount)
+	}
+	msg := tgbotapi.NewMessage(int64(tgID), str)
+	msg.ParseMode = "markdown"
 	TgBot.Send(msg)
 }
 
@@ -276,10 +326,15 @@ func sendNodesStats(tgID int, dbUser *UserType) {
 		return
 	}
 	for i, v := range dbUser.Nodes {
+		log.Logger.Debug(v)
 		n := global.Nodes[v]
+		log.Logger.Debug(n)
 		var status string
 		if n == nil {
-			return
+			if !Config.GetBool("allowReputationNilNodeStats") {
+				continue
+			}
+			n = &NodeType{NodeID: v}
 		}
 		if n.Active {
 			status = "Active ✅"
@@ -315,7 +370,6 @@ func sendLeaderBoard(tgID int64) {
 	str := fmt.Sprintf("🏆 **Leader Board** (Nodes count: %v) \n\n", nLen)
 
 	first3 := int(math.Min(3, float64(nLen)))
-	fmt.Println(first3)
 	for i := 0; i < first3; i++ {
 		medal := []string{"🥇", "🥈", "🥉"}
 		var isUserNode string
