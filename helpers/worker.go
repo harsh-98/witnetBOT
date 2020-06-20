@@ -232,7 +232,7 @@ func (witnet *WitnetConnector) ProcessBlocks(resp RespObj) (int, error) {
 
 	// It might happen that the hashToReward is empty
 	if len(hashToReward) == 0 {
-		return 0, erros.New("hashToReward is of 0 len")
+		return 0, errors.New("hashToReward is of 0 len")
 	}
 
 	var dbQuery string
@@ -252,7 +252,7 @@ func (witnet *WitnetConnector) ProcessBlocks(resp RespObj) (int, error) {
 		log.Logger.Debugf("block hashes: %s, pkh: %s", hash, pkh)
 		dbQuery += fmt.Sprintf("insert into blockchain (Epoch, Hash, Miner) values (%v, '%s' , '%s'); ", reward.Epoch, hash, pkh)
 	}
-	log.Logger.Debug(dbQuery)
+	// log.Logger.Debug(dbQuery)
 	_, err := sqldb.Exec(dbQuery)
 	if err != nil {
 		return 0, err

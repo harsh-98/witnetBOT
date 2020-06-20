@@ -185,14 +185,14 @@ func sendNodeDetails(tgID int, nodeID string) {
 	if !Config.GetBool("disableComplexQuery") {
 		query := fmt.Sprintf(`
 			select * from 
-				(select count(epoch) as blockCount from blockchain) as T1 
+				(select count(epoch) as blockCount from blockchain where Miner =  "%s") as T1 
 				inner join  
 				(select group_concat(epoch) as epochs  from 
-					(select * from blockchain where Miner =  "%s" order by   Epoch desc limit 5) as T) as T2 on true ;`, nodeID)
-
+					(select * from blockchain where Miner =  "%s" order by   Epoch desc limit 5) as T) as T2 on true ;`, nodeID, nodeID)
+		// log.Logger.Debug(query)
 		rows, err := sqldb.Query(query)
 		if err != nil {
-			log.Logger.Debug(err)
+			// log.Logger.Debug(err)
 			msg := tgbotapi.NewMessage(int64(tgID), "⛔️ Fetching details for Node resulted in error")
 			TgBot.Send(msg)
 		}
