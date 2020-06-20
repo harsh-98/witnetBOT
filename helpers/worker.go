@@ -175,7 +175,7 @@ func queryBlockchain() {
 		rows.Close()
 
 		epochQuery := fmt.Sprintf(`{"jsonrpc": "2.0","method": "getBlockChain", "params": {"epoch":%v, "limit": %v}, "id": "1"}`, epoch+1, limit)
-		log.Logger.Debugf("\n%s\n\n", epochQuery)
+		log.Logger.Debug(epochQuery)
 		resp := witnet.QueryRPC(epochQuery)
 		if resp.Error != nil {
 			log.Logger.Error(resp.Error.(string))
@@ -230,6 +230,11 @@ func (witnet *WitnetConnector) ProcessBlocks(resp RespObj) (int, error) {
 		// blockHashes = append(blockHashes, hash)
 	}
 
+	// It might happen that the hashToReward is empty
+	if len(hashToReward) == 0 {
+		return 0, erros.New("hashToReward is of 0 len")
+	}
+
 	var dbQuery string
 	for hash, reward := range hashToReward {
 		blockQuery := fmt.Sprintf(`{"jsonrpc": "2.0","method": "getBlock", "params": ["%s"], "id": "1"}`, hash)
@@ -252,6 +257,7 @@ func (witnet *WitnetConnector) ProcessBlocks(resp RespObj) (int, error) {
 	if err != nil {
 		return 0, err
 	}
+	// notifyBlockMined
 	if !Config.GetBool("disableBlockMinedNotify") {
 		for _, reward := range hashToReward {
 			for _, user := range global.NodeUsers[reward.Miner] {

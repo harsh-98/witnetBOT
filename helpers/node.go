@@ -77,7 +77,7 @@ func (d DataBaseType) GetNodes() error {
 	return nil
 }
 
-// this functions notifies user
+// this functions notifies user if
 // their nodes is added in reputation list
 func notifyReputationList(nodeIDs []string) {
 	ids := strings.Join(nodeIDs, "\",\"")

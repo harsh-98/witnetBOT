@@ -23,7 +23,6 @@ type UserType struct {
 func GetUserByTelegramID(tgID int64) (*UserType, error) {
 	for _, u := range global.Users {
 		if tgID == u.UserID {
-			fmt.Printf("%+v \n", tgID)
 			return u, nil
 		}
 	}

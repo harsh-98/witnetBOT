@@ -27,7 +27,7 @@ func (d DataBaseType) RemoveUserNode(nodeID string, userID int64) error {
 		if n == nodeID {
 			log.Logger.Debug("Remove node from user")
 			global.Users[userID].Nodes = append(nodes[:j], nodes[j+1:]...)
-			return nil
+			break
 		}
 	}
 	// remove user from node owner
@@ -36,7 +36,7 @@ func (d DataBaseType) RemoveUserNode(nodeID string, userID int64) error {
 		if u == userID {
 			log.Logger.Debug("Remove user from node owner")
 			global.NodeUsers[nodeID] = append(users[:j], users[j+1:]...)
-			log.Logger.Debug(global.NodeUsers[nodeID])
+			break
 		}
 	}
 

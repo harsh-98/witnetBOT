@@ -67,7 +67,7 @@ func addNodes(message *tgbotapi.Message) {
 	var nodeStatus, repNodeStatus string
 	userID := int64(message.From.ID)
 	err = DB.AddUserNode(userID, keys)
-	extra := " ```   But these are not present in reputation list. I am watching 🧐 for these nodes , will notify if added to reputation list.\n\n   Meanwhile go have some water 🚰.```"
+	extra := " ```   I am watching 🧐 for these nodes , will notify if added to reputation list.\n\n   Meanwhile go have some water 🚰.```"
 	if err == nil {
 		for _, key := range keys {
 			if global.Nodes[key] == nil {
@@ -77,12 +77,12 @@ func addNodes(message *tgbotapi.Message) {
 			}
 		}
 		if repNodeStatus != "" {
-			msg := tgbotapi.NewMessage(userID, fmt.Sprintf("✅ Node(s) added!! ```\n\n %s \n```", repNodeStatus))
+			msg := tgbotapi.NewMessage(userID, fmt.Sprintf("✅ Node(s) added!! ```\n\n%s \n```", repNodeStatus))
 			msg.ParseMode = "markdown"
 			TgBot.Send(msg)
 		}
 		if nodeStatus != "" {
-			msg := tgbotapi.NewMessage(userID, fmt.Sprintf("✅ Node(s) added!! But ```\n\n %s \n``` %s", nodeStatus, extra))
+			msg := tgbotapi.NewMessage(userID, fmt.Sprintf("✅ Node(s) added!! But ```\n\n%s \n``` %s", nodeStatus, extra))
 			msg.ParseMode = "markdown"
 			TgBot.Send(msg)
 		}
@@ -370,7 +370,6 @@ func sendLeaderBoard(tgID int64) {
 	str := fmt.Sprintf("🏆 **Leader Board** (Nodes count: %v) \n\n", nLen)
 
 	first3 := int(math.Min(3, float64(nLen)))
-	log.Logger.Error(first3)
 	for i := 0; i < first3; i++ {
 		medal := []string{"🥇", "🥈", "🥉"}
 		var isUserNode string
