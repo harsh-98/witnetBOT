@@ -73,7 +73,7 @@ func (d DataBaseType) GetNodes() error {
 	rows.Close()
 	log.Logger.Infof("Adding %v nodes", len(nodes))
 	global.Nodes = nodes
-	global.Ranking = nodeRepSort
+	global.ReputationLB = nodeRepSort
 	return nil
 }
 

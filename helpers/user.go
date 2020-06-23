@@ -99,6 +99,9 @@ func (d DataBaseType) GetUsers() {
 			}
 			rows2.Close()
 			log.Logger.Debugf("%v", user)
+			if isAdmin {
+				global.Admin = append(global.Admin, &user)
+			}
 			global.Users[user.UserID] = &user
 		}
 		log.Logger.Debugf("Len of users %v", len(global.Users))

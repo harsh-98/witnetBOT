@@ -23,19 +23,6 @@ type WitnetConnector struct {
 	Address string
 }
 
-// {} with type
-type NodeRepSort []NodeType
-
-func (s NodeRepSort) Len() int {
-	return len(s)
-}
-func (s NodeRepSort) Swap(i, j int) {
-	s[i], s[j] = s[j], s[i]
-}
-func (s NodeRepSort) Less(i, j int) bool {
-	return s[i].Reputation > s[j].Reputation
-}
-
 func (w *WitnetConnector) QueryRPC(msg string) RespObj {
 	if !strings.HasSuffix(msg, "\n") {
 		msg = fmt.Sprintf("%s\n", msg)
@@ -117,9 +104,9 @@ func (w *WitnetConnector) ProcessAndUpdateDB(resp RespObj) {
 		}
 		sort.Sort(nodeRepSort)
 		global.Nodes = nodes
-		global.Ranking = nodeRepSort
+		global.ReputationLB = nodeRepSort
 
-		// log.Logger.Debugf("%+v", global.Ranking)
+		// log.Logger.Debugf("%+v", global.ReputationLB)
 		DB.AddNodesInTable(nodes)
 		notifyReputationList(newNodes)
 	}
@@ -152,6 +139,27 @@ func queryWitnet() {
 	resp := witnet.QueryRPC(`{"jsonrpc": "2.0","method": "getReputationAll", "id": "1"}`)
 	witnet.ProcessAndUpdateDB(resp)
 	queryBlockchain()
+	updateBlocksLB()
+
+}
+func updateBlocksLB() {
+	query := "select count(*) as Count , Miner from blockchain group by Miner order by count desc;"
+	rows, err := sqldb.Query(query)
+	if err != nil {
+		log.Logger.Error("Err in fetching the blockchain", err)
+	}
+	var count int64
+	var miner string
+	var nodeBlockSort NodeBlockSort
+	for rows.Next() {
+		rows.Scan(&count, &miner)
+		nodeBlockSort = append(nodeBlockSort, NodeBlock{
+			Blocks: count,
+			NodeID: miner,
+		})
+	}
+	log.Logger.Debug(nodeBlockSort)
+	global.BlocksLB = nodeBlockSort
 }
 func queryBlockchain() {
 	for {
@@ -261,7 +269,7 @@ func (witnet *WitnetConnector) ProcessBlocks(resp RespObj) (int, error) {
 	if !Config.GetBool("disableBlockMinedNotify") {
 		for _, reward := range hashToReward {
 			for _, user := range global.NodeUsers[reward.Miner] {
-				msg := tgbotapi.NewMessage(int64(user), fmt.Sprintf("`👌%v block was mined by your node %s`", reward.Epoch, reward.Miner))
+				msg := tgbotapi.NewMessage(int64(user), fmt.Sprintf("`👌 #%v block was mined by your node %s`", reward.Epoch, reward.Miner))
 				msg.ParseMode = "markdown"
 				TgBot.Send(msg)
 			}

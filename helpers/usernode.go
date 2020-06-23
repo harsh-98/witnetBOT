@@ -2,9 +2,11 @@ package helpers
 
 import (
 	"fmt"
+	"strings"
 
 	"errors"
 
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/harsh-98/witnetBOT/log"
 )
 
@@ -70,4 +72,83 @@ func (d DataBaseType) AddUserNode(userID int64, nodeIDs []string) error {
 	// add user's node in global.Users
 	global.Users[userID].Nodes = append(global.Users[userID].Nodes, nodeIDs...)
 	return nil
+}
+
+func addNodes(message *tgbotapi.Message) {
+	dbUser, err := GetUserByTelegramID(int64(message.From.ID))
+	if err != nil {
+		log.Logger.Errorf("Unknown user TG ID = %v trying to add node %s\n\r", message.From.ID, message.Text)
+		return
+	}
+	processKey := strings.Split(message.Text, " ")
+	var keys []string
+	// using map to handle duplicate key input from user
+	duplicateHandle := make(map[string]bool)
+	for _, k := range processKey {
+		k = strings.Trim(k, " ")
+		if k != "" {
+			duplicateHandle[k] = true
+		}
+	}
+	for k := range duplicateHandle {
+		keys = append(keys, k)
+	}
+	log.Logger.Debug(keys)
+
+	// handle 0 keys
+	if len(keys) == 0 {
+		msg := tgbotapi.NewMessage(int64(message.From.ID), fmt.Sprintf("`⛔️ Invalid key(s) %s`", message.Text))
+		msg.ParseMode = "markdown"
+		TgBot.Send(msg)
+		return
+	}
+	// handle invalid keys
+	for _, key := range keys {
+		if !(len(key) == 43 && strings.HasPrefix(key, "twit")) && !(len(key) == 42 && strings.HasPrefix(key, "wit")) {
+			msg := tgbotapi.NewMessage(int64(message.From.ID), fmt.Sprintf("⛔️ Invalid key %s \n Either wrong length or prefix ", key))
+			TgBot.Send(msg)
+			return
+		}
+	}
+	// check if the key is present in userNodeMap
+	if dbUser.Nodes != nil {
+		for _, n := range dbUser.Nodes {
+			for _, key := range keys {
+				if n == key {
+					msg := tgbotapi.NewMessage(int64(message.From.ID), fmt.Sprintf("⛔️ You have already added this key %s", key))
+					TgBot.Send(msg)
+					return
+				}
+			}
+
+		}
+	}
+	var nodeStatus, repNodeStatus string
+	userID := int64(message.From.ID)
+	err = DB.AddUserNode(userID, keys)
+	extra := " ```   I am watching 🧐 for these nodes , will notify if added to reputation list.\n\n   Meanwhile go have some water 🚰.```"
+	if err == nil {
+		for _, key := range keys {
+			if global.Nodes[key] == nil {
+				nodeStatus += fmt.Sprintf("key: %s is not in reputation list \n", key)
+			} else {
+				repNodeStatus += fmt.Sprintf("key: %s is in reputation list \n", key)
+			}
+		}
+		if repNodeStatus != "" {
+			msg := tgbotapi.NewMessage(userID, fmt.Sprintf("✅ Node(s) added!! ```\n\n%s \n```", repNodeStatus))
+			msg.ParseMode = "markdown"
+			TgBot.Send(msg)
+		}
+		if nodeStatus != "" {
+			msg := tgbotapi.NewMessage(userID, fmt.Sprintf("✅ Node(s) added!! But ```\n\n%s \n``` %s", nodeStatus, extra))
+			msg.ParseMode = "markdown"
+			TgBot.Send(msg)
+		}
+	} else {
+		log.Logger.Error(err)
+		msg := tgbotapi.NewMessage(userID, "Failed adding address.")
+		TgBot.Send(msg)
+		ReportToAdmins(fmt.Sprintf("Failed adding node %s from user: %v", message.Text, userID))
+	}
 }
