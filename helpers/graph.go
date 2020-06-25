@@ -93,7 +93,11 @@ func GenerateGraph(tgID int64) error {
 	colors := getColors()
 
 	// nodes and its length
-	nodeIDs := global.Users[tgID].Nodes
+	nodeIDToName := global.Users[tgID].Nodes
+	nodeIDs := []string{}
+	for k, _ := range nodeIDToName {
+		nodeIDs = append(nodeIDs, k)
+	}
 	nLen := len(nodeIDs)
 
 	// reutrn in user hasn't added any users

@@ -37,6 +37,7 @@ CREATE TABLE blockchain (
 CREATE TABLE userNodeMap (
 	UserID int,
 	NodeID  varchar(257),
+	NodeName  varchar(257),
 	CONSTRAINT Mapping PRIMARY KEY (UserID,NodeID),
 	-- FOREIGN KEY (NodeID) REFERENCES tblNodes(NodeID),
 	FOREIGN KEY (UserID) REFERENCES tblUsers(UserID)

@@ -13,7 +13,7 @@ type UserType struct {
 	FirstName  string
 	LastName   string
 	IsAdmin    bool
-	Nodes      []string
+	Nodes      map[string]*string
 	LastMenuID int
 }
 
@@ -79,8 +79,8 @@ func (d DataBaseType) GetUsers() {
 				LastName:  tgLastName,
 				IsAdmin:   isAdmin,
 			}
-			user.Nodes = []string{}
-			rows2, err2 := sqldb.Query(fmt.Sprintf("SELECT NodeID FROM userNodeMap where userNodeMap.UserID=%v;", userID))
+			user.Nodes = make(map[string]*string)
+			rows2, err2 := sqldb.Query(fmt.Sprintf("SELECT NodeID, NodeName FROM userNodeMap where userNodeMap.UserID=%v;", userID))
 			if err2 != nil {
 				log.Logger.Errorf("Error fetching nodes for user ID %v from DB: %s\n\r", userID, err2)
 				continue
@@ -90,12 +90,16 @@ func (d DataBaseType) GetUsers() {
 			)
 
 			for rows2.Next() {
-				err2 := rows2.Scan(&nodeID)
-				log.Logger.Debugf("Add %s for %v", nodeID, userID)
+				// using a global nodeName is not correct as the point will always point to same location for different values
+				// hence overwriting with last value
+				var nodeName string
+				err2 := rows2.Scan(&nodeID, &nodeName)
+				log.Logger.Debugf("Add %s for %v: Name %s", nodeID, userID, nodeName)
 				if err2 == nil {
-					user.Nodes = append(user.Nodes, nodeID)
+					user.Nodes[nodeID] = &nodeName
+					global.NodeUsers[nodeID] = append(global.NodeUsers[nodeID], userID)
 				}
-				global.NodeUsers[nodeID] = append(global.NodeUsers[nodeID], userID)
+
 			}
 			rows2.Close()
 			log.Logger.Debugf("%v", user)

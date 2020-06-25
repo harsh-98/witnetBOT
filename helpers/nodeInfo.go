@@ -7,55 +7,69 @@ import (
 	"github.com/harsh-98/witnetBOT/log"
 )
 
-func sendNodesStats(tgID int, dbUser *UserType) {
+func sendNodesStats(tgID int64, dbUser *UserType) {
 	nLen := len(dbUser.Nodes)
 	log.Logger.Debug(*dbUser)
 	if nLen == 0 {
-		msg := tgbotapi.NewMessage(int64(tgID), "⛔️ No nodes added yet")
+		msg := tgbotapi.NewMessage(tgID, "⛔️ No nodes added yet")
 		TgBot.Send(msg)
 		return
 	}
-	for i, v := range dbUser.Nodes {
-		log.Logger.Debug(v)
-		n := global.Nodes[v]
-		log.Logger.Debug(n)
+	i := 0
+	for nodeID, nodeName := range dbUser.Nodes {
+		n := global.Nodes[nodeID]
+		log.Logger.Debug("Nodeid ", nodeID, " Node: ", n, " Name: ", *nodeName)
 		var status string
 		if n == nil {
 			if !Config.GetBool("allowReputationNilNodeStats") {
 				continue
 			}
-			n = &NodeType{NodeID: v}
+			n = &NodeType{NodeID: nodeID}
 		}
 		if n.Active {
 			status = "Active ✅"
 		} else {
 			status = "Not Active ⭕️"
 		}
+
+		// nodeStats string
 		str := fmt.Sprintf("`Node %v/%v - %s\n\r\n\r"+
-			"Name: %s\n\r"+
-			"Reputation: %v`", i+1, nLen, status, n.NodeID, n.Reputation)
+			"ID: %s\n\r"+
+			"Name: %s \n\r"+
+			"Reputation: %v`", i+1, nLen, status, n.NodeID, *nodeName, n.Reputation)
+
+		// add buttons for node
+		var buttons []tgbotapi.InlineKeyboardButton
+		buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData("📖 Details", fmt.Sprintf(":NodeDetails_%v", n.NodeID)))
+		if *nodeName == "" {
+			buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData("✍️ Name It", fmt.Sprintf(":NodeNameIt_%v", n.NodeID)))
+		}
+		buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData("⛔️ Remove", fmt.Sprintf(":RemoveNode_%v", n.NodeID)))
+		// keyboard for node
 		var keyboard = tgbotapi.NewInlineKeyboardMarkup(
 			tgbotapi.NewInlineKeyboardRow(
-				tgbotapi.NewInlineKeyboardButtonData("📖 Details", fmt.Sprintf(":NodeDetails_%v", n.NodeID)),
-				tgbotapi.NewInlineKeyboardButtonData("⛔️ Remove", fmt.Sprintf(":RemoveNode_%v", n.NodeID)),
+				buttons...,
 			),
 		)
-		msg := tgbotapi.NewMessage(int64(tgID), str)
+		msg := tgbotapi.NewMessage(tgID, str)
 		msg.ParseMode = "markdown"
 		msg.ReplyMarkup = keyboard
 		TgBot.Send(msg)
+		i++
 	}
 }
 
-func sendNodeDetails(tgID int, nodeID string) {
+func sendNodeDetails(tgID int64, nodeID string) {
 	n := global.Nodes[nodeID]
+	nodeName := global.Users[tgID].Nodes[nodeID]
 	if n == nil {
 		n = &NodeType{
 			NodeID: nodeID,
 		}
 	}
-	str := fmt.Sprintf("`NodeID: %s\n\r\n\rActive: %t\n\rReputation: %v\n\r`",
-		n.NodeID, n.Active, n.Reputation)
+	str := fmt.Sprintf("`NodeID: %s\n\rNodeName: %s\n\r\n\rActive: %t\n\rReputation: %v\n\r`",
+		n.NodeID, *nodeName, n.Active, n.Reputation)
+
 	if !Config.GetBool("disableComplexQuery") {
 		query := fmt.Sprintf(`
 			select * from 
@@ -67,7 +81,7 @@ func sendNodeDetails(tgID int, nodeID string) {
 		rows, err := sqldb.Query(query)
 		if err != nil {
 			// log.Logger.Debug(err)
-			msg := tgbotapi.NewMessage(int64(tgID), "⛔️ Fetching details for Node resulted in error")
+			msg := tgbotapi.NewMessage(tgID, "⛔️ Fetching details for Node resulted in error")
 			TgBot.Send(msg)
 		}
 		var (
@@ -81,7 +95,7 @@ func sendNodeDetails(tgID int, nodeID string) {
 		str += fmt.Sprintf("`BlockMinted: %v\n\rBlock submitted last 5 Epochs: %s\n\rBlock rewards : %v\n\r`",
 			blockCount, epoch, 500*blockCount)
 	}
-	msg := tgbotapi.NewMessage(int64(tgID), str)
+	msg := tgbotapi.NewMessage(tgID, str)
 	msg.ParseMode = "markdown"
 	TgBot.Send(msg)
 }

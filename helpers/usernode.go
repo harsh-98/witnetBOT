@@ -24,14 +24,16 @@ func (d DataBaseType) RemoveUserNode(nodeID string, userID int64) error {
 		return err
 	}
 	// remove node from user's list
-	nodes := global.Users[userID].Nodes
-	for j, n := range nodes {
-		if n == nodeID {
-			log.Logger.Debug("Remove node from user")
-			global.Users[userID].Nodes = append(nodes[:j], nodes[j+1:]...)
-			break
-		}
-	}
+	// nodes := global.Users[userID].Nodes
+	delete(global.Users[userID].Nodes, nodeID)
+	// for j, n := range nodes {
+	// 	if n == nodeID {
+	// 		log.Logger.Debug("Remove node from user")
+	// 		global.Users[userID].Nodes = append(nodes[:j], nodes[j+1:]...)
+	// 		break
+	// 	}
+	// }
+
 	// remove user from node owner
 	users := global.NodeUsers[nodeID]
 	for j, u := range users {
@@ -44,17 +46,17 @@ func (d DataBaseType) RemoveUserNode(nodeID string, userID int64) error {
 
 	return nil
 }
-func (d DataBaseType) AddUserNode(userID int64, nodeIDs []string) error {
-	if len(nodeIDs) == 0 {
+func (d DataBaseType) AddUserNode(userID int64, nodeIDToName map[string]string) error {
+	if len(nodeIDToName) == 0 {
 		return errors.New("Usernode list is empty")
 	}
 	var str string
 	var report string
 	userName := global.Users[userID].UserName
-
-	for i, nodeID := range nodeIDs {
-		str = fmt.Sprintf("%s insert into userNodeMap values (%v, '%s');", str, userID, nodeID)
-		report = fmt.Sprintf("%s %v: %s\n", report, i+1, nodeID)
+	i := 0
+	for nodeID, nodeName := range nodeIDToName {
+		str = fmt.Sprintf("%s insert into userNodeMap values (%v, '%s', '%s');", str, userID, nodeID, nodeName)
+		report = fmt.Sprintf("%s %v: %s '%s'\n", report, i+1, nodeID, nodeName)
 	}
 	// str = fmt.Sprintf("%s insert into userNodeMap values (%v, '%s');", str, n.UserID, n.NodeID)
 	_, err := sqldb.Exec(str)
@@ -66,11 +68,12 @@ func (d DataBaseType) AddUserNode(userID int64, nodeIDs []string) error {
 	ReportToAdmins(fmt.Sprintf("Username: %s (ID: %v) %s", userName, userID, report))
 
 	// add node-user in global.NodeUser for searching users by nodeid
-	for _, nodeID := range nodeIDs {
+	for nodeID, nodeName := range nodeIDToName {
 		global.NodeUsers[nodeID] = append(global.NodeUsers[nodeID], userID)
+		// add user's node in global.Users
+		global.Users[userID].Nodes[nodeID] = &nodeName
 	}
-	// add user's node in global.Users
-	global.Users[userID].Nodes = append(global.Users[userID].Nodes, nodeIDs...)
+	log.Logger.Debug(fmt.Sprintf("Node of %v:", userID), global.Users[userID].Nodes)
 	return nil
 }
 
@@ -83,14 +86,26 @@ func addNodes(message *tgbotapi.Message) {
 	processKey := strings.Split(message.Text, " ")
 	var keys []string
 	// using map to handle duplicate key input from user
-	duplicateHandle := make(map[string]bool)
+	// also maps nodeid to nodename
+	nodeIDToName := make(map[string]string)
 	for _, k := range processKey {
 		k = strings.Trim(k, " ")
 		if k != "" {
-			duplicateHandle[k] = true
+			node := strings.Split(k, ",")
+			if len(node) == 1 {
+				nodeIDToName[node[0]] = ""
+			} else {
+				if len(node[1]) > nodeNameLength {
+					msg := tgbotapi.NewMessage(int64(message.From.ID), fmt.Sprintf("`⛔️ Invalid length of name %s`", node[1]))
+					msg.ParseMode = "markdown"
+					TgBot.Send(msg)
+					return
+				}
+				nodeIDToName[node[0]] = node[1]
+			}
 		}
 	}
-	for k := range duplicateHandle {
+	for k := range nodeIDToName {
 		keys = append(keys, k)
 	}
 	log.Logger.Debug(keys)
@@ -112,7 +127,8 @@ func addNodes(message *tgbotapi.Message) {
 	}
 	// check if the key is present in userNodeMap
 	if dbUser.Nodes != nil {
-		for _, n := range dbUser.Nodes {
+		// TODO decrease complexity
+		for n, _ := range dbUser.Nodes {
 			for _, key := range keys {
 				if n == key {
 					msg := tgbotapi.NewMessage(int64(message.From.ID), fmt.Sprintf("⛔️ You have already added this key %s", key))
@@ -120,12 +136,11 @@ func addNodes(message *tgbotapi.Message) {
 					return
 				}
 			}
-
 		}
 	}
 	var nodeStatus, repNodeStatus string
 	userID := int64(message.From.ID)
-	err = DB.AddUserNode(userID, keys)
+	err = DB.AddUserNode(userID, nodeIDToName)
 	extra := " ```   I am watching 🧐 for these nodes , will notify if added to reputation list.\n\n   Meanwhile go have some water 🚰.```"
 	if err == nil {
 		for _, key := range keys {
@@ -151,4 +166,36 @@ func addNodes(message *tgbotapi.Message) {
 		TgBot.Send(msg)
 		ReportToAdmins(fmt.Sprintf("Failed adding node %s from user: %v", message.Text, userID))
 	}
+}
+
+func (d DataBaseType) NameNode(message *tgbotapi.Message, nodeID string) {
+	userID := int64(message.From.ID)
+	userName := global.Users[userID].UserName
+	nodeName := message.Text
+	if len(nodeName) > nodeNameLength {
+		msg := tgbotapi.NewMessage(userID, "Name length more than 50 characters")
+		msg.ParseMode = "markdown"
+		TgBot.Send(msg)
+		return
+	}
+	query := fmt.Sprintf("update userNodeMap set NodeName='%s' where NodeID='%s' and UserID=%v;", nodeName, nodeID, userID)
+	log.Logger.Debug(query)
+	_, err := sqldb.Exec(query)
+	var msg tgbotapi.MessageConfig
+	var failed string
+	if err != nil {
+		log.Logger.Errorf("Error adding node to DB: %s\n\r", err)
+		failed = "⛔️ Failed"
+		msg = tgbotapi.NewMessage(userID, fmt.Sprintf("`⛔️ Failed naming Node %s named to %s`", nodeID, nodeName))
+	} else {
+		msg = tgbotapi.NewMessage(userID, fmt.Sprintf("`✅ Node %s named to %s`", nodeID, nodeName))
+	}
+	msg.ParseMode = "markdown"
+	TgBot.Send(msg)
+
+	// add node name to the user node list
+	global.Users[userID].Nodes[nodeID] = &nodeName
+
+	report := fmt.Sprintf("%s Username: %v named node '%s' to '%s'", failed, userName, nodeID, nodeName)
+	ReportToAdmins(report)
 }
