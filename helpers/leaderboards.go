@@ -39,11 +39,9 @@ func (s NodeBlockSort) Less(i, j int) bool {
 	return s[i].Blocks > s[j].Blocks
 }
 
-func checkUsersNode(v string, list []string) bool {
-	for _, n := range list {
-		if n == v {
-			return true
-		}
+func checkUsersNode(v string, list map[string]*string) bool {
+	if list[v] != nil {
+		return true
 	}
 	return false
 }

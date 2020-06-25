@@ -9,9 +9,13 @@ import (
 
 const welcomeMessage = "Hello\n\r\n\r" +
 	"I am @elliotsenpai 's unofficial witnet monitor BOT and I am here to help you keep an eye on your nodes."
-const addNodeMsg = "Node's public key: Starts with twit (Testnet: Len 43) or wit(Mainnet: Len 42). \n\nYou can also enter multiple keys separated by space."
-
+const nodeNameLength = 50
+const addNodeMsg = "Node's public key: Starts with twit (Testnet: Len 43) or wit(Mainnet: Len 42). \n\n" +
+	"You can also enter multiple keys separated by space.\n\n" +
+	"For naming your node provide name separated by comma(name length should be less than 50).\n\n" +
+	" Example: nodeID1,nodeName1 nodeID2,nodeName2"
 const broadcastMsg = "Reply with the message you want to broadcast"
+const nameNodeMsg = "Provide name for node: "
 
 var TgBot *tgbotapi.BotAPI
 
@@ -28,6 +32,10 @@ func ReplyReceived(message *tgbotapi.Message) {
 			}
 		}
 	}
+	if strings.HasPrefix(message.ReplyToMessage.Text, nameNodeMsg) {
+		nodeID := strings.TrimPrefix(message.ReplyToMessage.Text, nameNodeMsg)
+		DB.NameNode(message, nodeID)
+	}
 	mainMenu(message.From)
 }
 
@@ -36,7 +44,7 @@ func CallbackQueryReceived(cb *tgbotapi.CallbackQuery) {
 		TgBot.AnswerCallbackQuery(tgbotapi.NewCallback(cb.ID, "Nodes Stats"))
 		dbUser, err := GetUserByTelegramID(int64(cb.From.ID))
 		if err == nil {
-			sendNodesStats(cb.From.ID, dbUser)
+			sendNodesStats(int64(cb.From.ID), dbUser)
 		}
 	}
 	if cb.Data == "AddUserNode" {
@@ -84,7 +92,7 @@ func CallbackQueryReceived(cb *tgbotapi.CallbackQuery) {
 		var nodeID, text string
 		if strings.HasPrefix(cb.Data, ":NodeDetails") {
 			nodeID = strings.TrimPrefix(cb.Data, ":NodeDetails_")
-			sendNodeDetails(cb.From.ID, nodeID)
+			sendNodeDetails(int64(cb.From.ID), nodeID)
 		}
 		if strings.HasPrefix(cb.Data, ":RemoveNode") {
 			nodeID = strings.TrimPrefix(cb.Data, ":RemoveNode_")
@@ -94,6 +102,16 @@ func CallbackQueryReceived(cb *tgbotapi.CallbackQuery) {
 				text = fmt.Sprintf("⛔️ %s", err)
 			}
 			msg := tgbotapi.NewMessage(int64(cb.From.ID), text)
+			TgBot.Send(msg)
+		}
+		if strings.HasPrefix(cb.Data, ":NodeNameIt") {
+			nodeID = strings.TrimPrefix(cb.Data, ":NodeNameIt_")
+			TgBot.AnswerCallbackQuery(tgbotapi.NewCallback(cb.ID, "Name you node"))
+			msg := tgbotapi.NewMessage(int64(cb.From.ID), nameNodeMsg+nodeID)
+			msg.ReplyMarkup = tgbotapi.ForceReply{
+				ForceReply: true,
+				Selective:  false,
+			}
 			TgBot.Send(msg)
 		}
 	}
@@ -125,6 +143,7 @@ func CommandReceived(update tgbotapi.Update) {
 			FirstName: update.Message.From.FirstName,
 			LastName:  update.Message.From.LastName,
 			IsAdmin:   false,
+			Nodes:     make(map[string]*string),
 		}
 		err = DB.AddUser(dbUser)
 		if err != nil {
