@@ -181,6 +181,7 @@ func queryBlockchain() {
 			}
 		}
 		rows.Close()
+		global.HighestEpoch = epoch
 
 		epochQuery := fmt.Sprintf(`{"jsonrpc": "2.0","method": "getBlockChain", "params": {"epoch":%v, "limit": %v}, "id": "1"}`, epoch+1, limit)
 		log.Logger.Debug(epochQuery)
@@ -269,9 +270,11 @@ func (witnet *WitnetConnector) ProcessBlocks(resp RespObj) (int, error) {
 	if !Config.GetBool("disableBlockMinedNotify") {
 		for _, reward := range hashToReward {
 			for _, user := range global.NodeUsers[reward.Miner] {
-				msg := tgbotapi.NewMessage(int64(user), fmt.Sprintf("`👌 #%v block was mined by your node %s`", reward.Epoch, reward.Miner))
+				nodeName := global.Users[user].Nodes[reward.Miner]
+				msg := tgbotapi.NewMessage(int64(user), fmt.Sprintf("`👌 #%v block was mined by your node: %s[%s]`", reward.Epoch, *nodeName, reward.Miner))
 				msg.ParseMode = "markdown"
 				TgBot.Send(msg)
+				global.HighestEpoch = int(reward.Epoch)
 			}
 		}
 	}

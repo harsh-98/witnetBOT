@@ -15,6 +15,8 @@ type Global struct {
 	NodeUsers map[string][]int64
 	// stores the admin list
 	Admin []*UserType
+	// highest epoch registered by the bot
+	HighestEpoch int
 }
 
 // map is nil by default, not like array which is initialized as empty
