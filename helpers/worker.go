@@ -218,7 +218,8 @@ type Mint struct {
 	Outputs []Transaction `json:"outputs" yaml:"outputs"`
 }
 type Transaction struct {
-	Pkh string `json:"pkh" yaml:"pkh"`
+	Pkh   string  `json:"pkh" yaml:"pkh"`
+	Value float64 `json:"value" yaml:"value"`
 }
 type Reward struct {
 	Miner string
@@ -253,13 +254,16 @@ func (witnet *WitnetConnector) ProcessBlocks(resp RespObj) (int, error) {
 			return 0, errors.New(resp.Error.(string))
 		}
 		// hashToReward[hash].Miner = result.(Block).Txs.Mint.Outputs[0].Pkh
-		pkh := result.(Block).Txs.Mint.Outputs[0].Pkh
+		transaction := result.(Block).Txs.Mint.Outputs[0]
+		// TODO handle multiple miners of the block
+		pkh := transaction.Pkh
+		value := transaction.Value
 		hashToReward[hash] = Reward{
 			Epoch: reward.Epoch,
 			Miner: pkh,
 		}
 		log.Logger.Debugf("block hashes: %s, pkh: %s", hash, pkh)
-		dbQuery += fmt.Sprintf("insert into blockchain (Epoch, Hash, Miner) values (%v, '%s' , '%s'); ", reward.Epoch, hash, pkh)
+		dbQuery += fmt.Sprintf("insert into blockchain (Epoch, Hash, Miner, Reward) values (%v, '%s' , '%s', %v); ", reward.Epoch, hash, pkh, int(value/1000000000))
 	}
 	// log.Logger.Debug(dbQuery)
 	_, err := sqldb.Exec(dbQuery)

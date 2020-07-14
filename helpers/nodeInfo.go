@@ -73,7 +73,7 @@ func sendNodeDetails(tgID int64, nodeID string) {
 	if !Config.GetBool("disableComplexQuery") {
 		query := fmt.Sprintf(`
 			select * from 
-				(select count(epoch) as blockCount from blockchain where Miner =  "%s") as T1 
+				(select count(epoch), sum(reward) as blockCount from blockchain where Miner =  "%s") as T1 
 				inner join  
 				(select group_concat(epoch) as epochs  from 
 					(select * from blockchain where Miner =  "%s" order by   Epoch desc limit 5) as T) as T2 on true ;`, nodeID, nodeID)
@@ -87,13 +87,14 @@ func sendNodeDetails(tgID int64, nodeID string) {
 		var (
 			blockCount int
 			epoch      string
+			reward     int
 		)
 		for rows.Next() {
-			rows.Scan(&blockCount, &epoch)
+			rows.Scan(&blockCount, &reward, &epoch)
 		}
 		rows.Close()
 		str += fmt.Sprintf("`BlockMinted: %v\n\rBlock submitted last 5 Epochs: %s\n\rBlock rewards : %v\n\r`",
-			blockCount, epoch, 500*blockCount)
+			blockCount, epoch, reward)
 	}
 	msg := tgbotapi.NewMessage(tgID, str)
 	msg.ParseMode = "markdown"
