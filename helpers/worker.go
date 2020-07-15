@@ -262,7 +262,7 @@ func (witnet *WitnetConnector) ProcessBlocks(resp RespObj) (int, error) {
 			Epoch: reward.Epoch,
 			Miner: pkh,
 		}
-		log.Logger.Debugf("block hashes: %s, pkh: %s", hash, pkh)
+		// log.Logger.Debugf("block hashes: %s, pkh: %s", hash, pkh)
 		dbQuery += fmt.Sprintf("insert into blockchain (Epoch, Hash, Miner, Reward) values (%v, '%s' , '%s', %v); ", reward.Epoch, hash, pkh, int(value/1000000000))
 	}
 	// log.Logger.Debug(dbQuery)

@@ -79,7 +79,7 @@ func sendReputationBoard(tgID int64) {
 func sendBlocksBoard(tgID int64) {
 	nLen := len(global.BlocksLB)
 	var str string
-	log.Logger.Debugf("Total number of blocks minted: %v", global.HighestEpoch)
+	log.Logger.Debugf("Block Leaderboard: %v", global.HighestEpoch)
 
 	first3 := int(math.Min(3, float64(nLen)))
 	var blockCount int64

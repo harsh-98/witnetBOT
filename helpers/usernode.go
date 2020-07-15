@@ -16,7 +16,7 @@ type UserNode struct {
 }
 
 func (d DataBaseType) RemoveUserNode(nodeID string, userID int64) error {
-	str := fmt.Sprintf("delete from UserNodeMap where NodeID = '%s' and UserID = %v", nodeID, userID)
+	str := fmt.Sprintf("delete from userNodeMap where NodeID = '%s' and UserID = %v", nodeID, userID)
 	log.Logger.Debug(str)
 	_, err := sqldb.Exec(str)
 	if err != nil {
