@@ -232,7 +232,7 @@ func GenerateGraph(tgID int64) error {
 	// https://github.com/llgcode/draw2d/blob/master/samples/line/line.go plot line to graph
 	c := 0
 	fMaxY := float64(maxY) - float64(diff)/float64(maxY-minY)
-	for _, pointList := range graphData {
+	for nodeID, pointList := range graphData {
 		var colorID = (c + 1) % len(colors)
 		// set color for line
 		gc.SetFillColor(colors[colorID])
@@ -256,8 +256,11 @@ func GenerateGraph(tgID int64) error {
 
 		}
 		// Add node right side label
-		text := fmt.Sprintf("Node %v", c)
-		addLabel(gc, colors[colorID], text, width-rightMargin+16, topMargin+float64(c*20))
+		nodeName := *nodeIDToName[nodeID]
+		if nodeName == "" {
+			nodeName = fmt.Sprintf("Node %v", c)
+		}
+		addLabel(gc, colors[colorID], nodeName, width-rightMargin+16, topMargin+float64(c*20))
 
 		c++
 	}

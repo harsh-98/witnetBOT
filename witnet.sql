@@ -45,3 +45,4 @@ CREATE TABLE userNodeMap (
 );
 
 -- ALTER TABLE blockchain ADD reward INTEGER;
+-- table name is case-sensitive use camel case.
