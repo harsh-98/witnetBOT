@@ -158,7 +158,8 @@ func updateBlocksLB() {
 			NodeID: miner,
 		})
 	}
-	log.Logger.Debug(nodeBlockSort)
+	log.Logger.Debug(len(nodeBlockSort))
+	log.Logger.Trace(nodeBlockSort)
 	global.BlocksLB = nodeBlockSort
 }
 func queryBlockchain() {

@@ -51,7 +51,7 @@ var medal = []string{"🥇", "🥈", "🥉"}
 func sendReputationBoard(tgID int64) {
 	nLen := len(global.ReputationLB)
 
-	str := fmt.Sprintf("🏆 **Reputation 🎖 Leader Board** (Nodes count: %v) \n\n", nLen)
+	str := fmt.Sprintf("🏆 **Reputation 🎖 LeaderBoard** (Nodes with reputation: %v) \n\n", nLen)
 
 	first3 := int(math.Min(3, float64(nLen)))
 	for i := 0; i < first3; i++ {
@@ -102,7 +102,7 @@ func sendBlocksBoard(tgID int64) {
 			str += fmt.Sprintf("`%s\n\r%v - %s\n\rBlocks mined: %v \n\r`\n\n", isUserNode, i+1, nodeID, global.BlocksLB[i].Blocks)
 		}
 	}
-	header := fmt.Sprintf("🏆 **Mining 🔨 Leader Board** (Number of blocks minted: %v) \n\n", global.HighestEpoch)
+	header := fmt.Sprintf("🏆 **Mining 🔨 LeaderBoard** (Highest epoch: %v, Mined block: %v) \n\n", global.HighestEpoch, blockCount)
 	msg := tgbotapi.NewMessage(int64(tgID), header+str)
 	msg.ParseMode = "markdown"
 	TgBot.Send(msg)

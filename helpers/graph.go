@@ -241,7 +241,7 @@ func GenerateGraph(tgID int64) error {
 		for i := 0; i < len(pointList)-1; i++ {
 			p1 := pointList[i]
 			p2 := pointList[i+1]
-			log.Logger.Debug(p1, p2)
+			log.Logger.Trace(p1, p2)
 
 			xdiff := (width - (leftMargin + rightMargin)) / float64(maxX-minX)
 			ydiff := (height - (topMargin + bottomMargin)) / float64(maxY-minY)
