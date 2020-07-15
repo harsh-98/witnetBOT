@@ -57,7 +57,7 @@ func sendReputationBoard(tgID int64) {
 	for i := 0; i < first3; i++ {
 
 		var isUserNode string
-		nodeID := global.BlocksLB[i].NodeID
+		nodeID := global.ReputationLB[i].NodeID
 		if checkUsersNode(nodeID, global.Users[tgID].Nodes) {
 			isUserNode = fmt.Sprintf("(Your node) %s", *(global.Users[tgID].Nodes[nodeID]))
 		}
