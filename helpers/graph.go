@@ -121,14 +121,14 @@ func GenerateGraph(tgID int64) error {
 	// ?, ?, ?, ? and entries which will be replacing the question marks
 	var qMarkArr []string
 	var entries []interface{}
-	for nodeID := range nodeIDs {
+	for _, nodeID := range nodeIDs {
 		qMarkArr = append(qMarkArr, "?")
 		entries = append(entries, nodeID)
 	}
 	placeHolder := strings.Join(qMarkArr, ", ")
 	query := fmt.Sprintf("select NodeID, Reputation, CreateAt from reputation where NodeID in (%s) and CreateAt > DATE_SUB(NOW(), INTERVAL %v HOUR);", placeHolder, graphXAxisDurationHr)
 	log.Logger.Debugf("Graph query: %s", query)
-	rows, err := sqldb.Query(query, entries)
+	rows, err := sqldb.Query(query, entries...)
 	if err != nil {
 		log.Logger.Errorf("Error fetching rating from DB: %s\n\r", err)
 		return err
@@ -196,7 +196,7 @@ func GenerateGraph(tgID int64) error {
 	var bottomMargin float64 = 60
 
 	gc := draw2dimg.NewGraphicContext(img)
-	log.Logger.Debugf("%+v\n", graphData)
+	log.Logger.Tracef("%+v\n", graphData)
 
 	draw2dkit.Rectangle(gc, 0, 0, width, height)
 	gc.SetFillColor(image.Black)

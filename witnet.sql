@@ -25,7 +25,7 @@ CREATE TABLE reputation (
 	NodeID  varchar(50),
 	Reputation float,
 	CreateAt TIMESTAMP DEFAULT now(),
-	FOREIGN KEY (NodeID) REFERENCES tblNodes(NodeID)
+	-- FOREIGN KEY (NodeID) REFERENCES tblNodes(NodeID)
 );
 
 CREATE TABLE blockchain (
@@ -46,3 +46,11 @@ CREATE TABLE userNodeMap (
 
 -- ALTER TABLE blockchain ADD reward INTEGER;
 -- table name is case-sensitive use camel case.
+
+-- finding the foreign key
+-- select COLUMN_NAME, CONSTRAINT_NAME, REFERENCED_COLUMN_NAME, REFERENCED_TABLE_NAME
+--    from information_schema.KEY_COLUMN_USAGE
+--    where TABLE_NAME = 'reputation';
+
+-- drop the foreign key
+--    ALTER TABLE reputation DROP FOREIGN KEY reputation_ibfk_1;

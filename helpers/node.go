@@ -90,11 +90,12 @@ func (d DataBaseType) GetNodes() error {
 // this node is added in reputation list
 func notifyNodeHasReputation(nodeID string) {
 	userIDs := global.NodeUsers[nodeID]
-
-	for userID := range userIDs {
-		nodeName := global.Users[int64(userID)].Nodes[nodeID]
-		msg := tgbotapi.NewMessage(int64(userID), fmt.Sprintf("`🥂Your node %s[%s] is added in reputation list.`", *nodeName, nodeID))
-		msg.ParseMode = "markdown"
-		TgBot.Send(msg)
+	if userIDs != nil {
+		for _, userID := range userIDs {
+			nodeName := global.Users[int64(userID)].Nodes[nodeID]
+			msg := tgbotapi.NewMessage(int64(userID), fmt.Sprintf("`🥂Your node %s[%s] is added in reputation list.`", *nodeName, nodeID))
+			msg.ParseMode = "markdown"
+			TgBot.Send(msg)
+		}
 	}
 }
