@@ -2,7 +2,6 @@ package helpers
 
 import (
 	"fmt"
-	"strings"
 	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
@@ -17,29 +16,39 @@ type NodeType struct {
 }
 
 func (d *DataBaseType) AddNodesInTable(nodes map[string]*NodeType) error {
-	var query string
 	loc, _ := time.LoadLocation("UTC")
 	t := time.Now().In(loc)
 	log.Logger.Infof(" number of nodes: %v", len(nodes))
-	for _, node := range nodes {
-		query = fmt.Sprintf(`%s 
-		INSERT INTO tblNodes (NodeID, Active, Reputation, Blocks) VALUES('%v', %t, %v, %v) ON DUPLICATE KEY UPDATE Active=%t, Reputation=%v;
-		INSERT INTO reputation (NodeID, Reputation, CreateAt)  VALUES('%v', %v, "%s");`,
-			query, node.NodeID, node.Active, node.Reputation, node.Blocks, node.Active, node.Reputation, node.NodeID, node.Reputation, t.Format(TIMEFORMAT))
-	}
-	// log.Logger.Debug(query)
-	if query == "" {
-		return nil
-	}
-	_, err := sqldb.Exec(query)
+
+	// truncate reputation
+	_, err := sqldb.Query("truncate tblNodes;")
 	if err != nil {
-		log.Logger.Errorf("Error adding nodes to DB: %s\n\r", err)
+		log.Logger.Errorf("DB: Failed truncating tblNodes: %s\n\r", err)
+		return err
+	}
+
+	// insert rows in reputation and tblNodes
+	var tblNodeRows, reputationRows [][]interface{}
+	for _, node := range nodes {
+		tblNodeRows = append(tblNodeRows, []interface{}{node.NodeID, node.Active, node.Reputation, node.Blocks, node.Active, node.Reputation})
+		reputationRows = append(reputationRows, []interface{}{node.NodeID, node.Reputation, t.Format(TIMEFORMAT)})
+	}
+
+	err = multipleInsert("INSERT INTO tblNodes (NodeID, Active, Reputation, Blocks) VALUES(?, ?, ?, ?) ON DUPLICATE KEY UPDATE Active=?, Reputation=?;", tblNodeRows)
+	if err != nil {
+		log.Logger.Errorf("DB: Error adding tblNodes: %s\n\r", err)
+		return err
+	}
+	err = multipleInsert("INSERT INTO reputation (NodeID, Reputation, CreateAt)  VALUES(?, ?, ?);", reputationRows)
+	if err != nil {
+		log.Logger.Errorf("DB: Error adding Reputation : %s\n\r", err)
 		return err
 	}
 	return nil
 }
 
 func (d DataBaseType) GetNodes() error {
+	// safe query
 	rows, err := sqldb.Query("select * from tblNodes order by Reputation desc")
 	if err != nil {
 		log.Logger.Errorf("Error fetching nodes from DB: %s\n\r", err)
@@ -77,28 +86,15 @@ func (d DataBaseType) GetNodes() error {
 	return nil
 }
 
-// this functions notifies user if
-// their nodes is added in reputation list
-func notifyReputationList(nodeIDs []string) {
-	ids := strings.Join(nodeIDs, "\",\"")
-	query := fmt.Sprintf("select NodeID, UserID from userNodeMap where NodeID in (\"%s\")", ids)
-	log.Logger.Debugf("query: %s", query)
-	rows, err := sqldb.Query(query)
-	if err != nil {
-		log.Logger.Errorf("Error querying userNode for newAddedNodes: %s\n", err)
-	}
-	var (
-		nodeID string
-		userID int64
-	)
-	for rows.Next() {
-		err := rows.Scan(&nodeID, &userID)
-		if err != nil {
-			log.Logger.Errorf("Error reading row: %s\n", err)
-		}
-		msg := tgbotapi.NewMessage(userID, fmt.Sprintf("`🥂Your node %s is added in reputation list.`", nodeID))
+// this function notifies owner's of node if
+// this node is added in reputation list
+func notifyNodeHasReputation(nodeID string) {
+	userIDs := global.NodeUsers[nodeID]
+
+	for userID := range userIDs {
+		nodeName := global.Users[int64(userID)].Nodes[nodeID]
+		msg := tgbotapi.NewMessage(int64(userID), fmt.Sprintf("`🥂Your node %s[%s] is added in reputation list.`", *nodeName, nodeID))
 		msg.ParseMode = "markdown"
 		TgBot.Send(msg)
 	}
-	rows.Close()
 }

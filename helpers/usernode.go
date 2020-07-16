@@ -16,9 +16,9 @@ type UserNode struct {
 }
 
 func (d DataBaseType) RemoveUserNode(nodeID string, userID int64) error {
-	str := fmt.Sprintf("delete from userNodeMap where NodeID = '%s' and UserID = %v", nodeID, userID)
-	log.Logger.Debug(str)
-	_, err := sqldb.Exec(str)
+	// safe query
+	_, err := sqldb.Query("delete from userNodeMap where NodeID=? and UserID=?", nodeID, userID)
+	// log.Logger.Debug(str)
 	if err != nil {
 		log.Logger.Error("Error removing node from DB")
 		return err
@@ -50,20 +50,27 @@ func (d DataBaseType) AddUserNode(userID int64, nodeIDToName map[string]string) 
 	if len(nodeIDToName) == 0 {
 		return errors.New("Usernode list is empty")
 	}
-	var str string
 	var report string
 	userName := global.Users[userID].UserName
+
 	i := 0
+	// rows of multiple insert query
+	var rows [][]interface{}
 	for nodeID, nodeName := range nodeIDToName {
-		str = fmt.Sprintf("%s insert into userNodeMap values (%v, '%s', '%s');", str, userID, nodeID, nodeName)
-		report = fmt.Sprintf("%s %v: %s '%s'\n", report, i+1, nodeID, nodeName)
+		// the row that will be inserted in the db
+		rows = append(rows, []interface{}{userID, nodeID, nodeName})
+		// generate report to be sent to admins
+		report += fmt.Sprintf("%v: %s (%s)\n", i+1, nodeName, nodeID)
+		i += 1
 	}
-	// str = fmt.Sprintf("%s insert into userNodeMap values (%v, '%s');", str, n.UserID, n.NodeID)
-	_, err := sqldb.Exec(str)
+
+	// exec multiple insert query
+	err := multipleInsert("insert into userNodeMap values (?, ?, ?);", rows)
 	if err != nil {
 		log.Logger.Errorf("Error adding node to DB: %s\n\r", err)
 		return err
 	}
+
 	// send report that new nodes are needed for user
 	ReportToAdmins(fmt.Sprintf("Username: %s (ID: %v) %s", userName, userID, report))
 
@@ -178,9 +185,8 @@ func (d DataBaseType) NameNode(message *tgbotapi.Message, nodeID string) {
 		TgBot.Send(msg)
 		return
 	}
-	query := fmt.Sprintf("update userNodeMap set NodeName='%s' where NodeID='%s' and UserID=%v;", nodeName, nodeID, userID)
-	log.Logger.Debug(query)
-	_, err := sqldb.Exec(query)
+	// safe query
+	_, err := sqldb.Query("update userNodeMap set NodeName=? where NodeID=? and UserID=?;", nodeName, nodeID, userID)
 	var msg tgbotapi.MessageConfig
 	var failed string
 	if err != nil {
