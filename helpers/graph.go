@@ -118,13 +118,20 @@ func GenerateGraph(tgID int64) error {
 		return nil
 	}
 
-	// query
-	query := fmt.Sprintf("select NodeID, Reputation, CreateAt from reputation where NodeID in (\"%s\") and CreateAt > DATE_SUB(NOW(), INTERVAL %v HOUR);", strings.Join(nodeIDs, "\",\""), graphXAxisDurationHr)
-	log.Logger.Debugf("query: %s", query)
-	rows, err := sqldb.Query(query)
+	// ?, ?, ?, ? and entries which will be replacing the question marks
+	var qMarkArr []string
+	var entries []interface{}
+	for nodeID := range nodeIDs {
+		qMarkArr = append(qMarkArr, "?")
+		entries = append(entries, nodeID)
+	}
+	placeHolder := strings.Join(qMarkArr, ", ")
+	query := fmt.Sprintf("select NodeID, Reputation, CreateAt from reputation where NodeID in (%s) and CreateAt > DATE_SUB(NOW(), INTERVAL %v HOUR);", placeHolder, graphXAxisDurationHr)
+	log.Logger.Debugf("Graph query: %s", query)
+	rows, err := sqldb.Query(query, entries)
 	if err != nil {
 		log.Logger.Errorf("Error fetching rating from DB: %s\n\r", err)
-		return nil
+		return err
 	}
 	var (
 		nodeID       string

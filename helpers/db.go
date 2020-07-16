@@ -62,3 +62,36 @@ func (d DataBaseType) Init() error {
 func (d DataBaseType) Close() {
 	sqldb.Close()
 }
+
+func multipleInsert(prepareQueryStr string, rows [][]interface{}) error {
+	// BEGIN: initialise prepare query
+	// https://stackoverflow.com/questions/26345318/how-can-i-prevent-sql-injection-attacks-in-go-while-using-database-sql
+	tx, err := sqldb.Begin()
+	if err != nil {
+		return err
+	}
+	stmt, err := tx.Prepare(prepareQueryStr)
+	defer stmt.Close()
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+	// END: initialise prepare query
+
+	for _, row := range rows {
+		_, err = stmt.Exec(row...)
+		if err != nil {
+			tx.Rollback()
+			return err
+		}
+	}
+
+	// BEGIN: sql tx commit
+	err = tx.Commit()
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+	// END: sql tx commit
+	return nil
+}

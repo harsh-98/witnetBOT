@@ -85,7 +85,6 @@ func (w *WitnetConnector) ProcessAndUpdateDB(resp RespObj) {
 		return
 	}
 	result := resp.Result
-	var newNodes []string
 	switch result.(type) {
 	case map[string]interface{}:
 		nodes := make(map[string]*NodeType)
@@ -97,7 +96,7 @@ func (w *WitnetConnector) ProcessAndUpdateDB(resp RespObj) {
 				Reputation: v.([]interface{})[0].(float64),
 			}
 			if global.Nodes[n.NodeID] == nil {
-				newNodes = append(newNodes, n.NodeID)
+				notifyNodeHasReputation(n.NodeID)
 			}
 			nodes[n.NodeID] = &n
 			nodeRepSort = append(nodeRepSort, n)
@@ -108,7 +107,6 @@ func (w *WitnetConnector) ProcessAndUpdateDB(resp RespObj) {
 
 		// log.Logger.Debugf("%+v", global.ReputationLB)
 		DB.AddNodesInTable(nodes)
-		notifyReputationList(newNodes)
 	}
 }
 
@@ -143,6 +141,7 @@ func queryWitnet() {
 
 }
 func updateBlocksLB() {
+	// safe query
 	query := "select count(*) as Count , Miner from blockchain group by Miner order by count desc;"
 	rows, err := sqldb.Query(query)
 	if err != nil {
@@ -164,6 +163,7 @@ func updateBlocksLB() {
 }
 func queryBlockchain() {
 	for {
+		// safe query
 		dbQuery := "select IFNULL(max(Epoch),0) from blockchain;"
 		rows, err := sqldb.Query(dbQuery)
 		if err != nil {
@@ -246,7 +246,7 @@ func (witnet *WitnetConnector) ProcessBlocks(resp RespObj) (int, error) {
 		return 0, errors.New("hashToReward is of 0 len")
 	}
 
-	var dbQuery string
+	var rows [][]interface{}
 	for hash, reward := range hashToReward {
 		blockQuery := fmt.Sprintf(`{"jsonrpc": "2.0","method": "getBlock", "params": ["%s"], "id": "1"}`, hash)
 		resp := witnet.QueryRPCBlock(blockQuery)
@@ -254,7 +254,6 @@ func (witnet *WitnetConnector) ProcessBlocks(resp RespObj) (int, error) {
 		if resp.Error != nil {
 			return 0, errors.New(resp.Error.(string))
 		}
-		// hashToReward[hash].Miner = result.(Block).Txs.Mint.Outputs[0].Pkh
 		transaction := result.(Block).Txs.Mint.Outputs[0]
 		// TODO handle multiple miners of the block
 		pkh := transaction.Pkh
@@ -263,11 +262,10 @@ func (witnet *WitnetConnector) ProcessBlocks(resp RespObj) (int, error) {
 			Epoch: reward.Epoch,
 			Miner: pkh,
 		}
-		// log.Logger.Debugf("block hashes: %s, pkh: %s", hash, pkh)
-		dbQuery += fmt.Sprintf("insert into blockchain (Epoch, Hash, Miner, Reward) values (%v, '%s' , '%s', %v); ", reward.Epoch, hash, pkh, int(value/1000000000))
+		log.Logger.Tracef("block hashes: %s, pkh: %s", hash, pkh)
+		rows = append(rows, []interface{}{reward.Epoch, hash, pkh, int(value / 1000000000)})
 	}
-	// log.Logger.Debug(dbQuery)
-	_, err := sqldb.Exec(dbQuery)
+	err := multipleInsert("insert into blockchain (Epoch, Hash, Miner, Reward) values (?, ?, ?, ?);", rows)
 	if err != nil {
 		return 0, err
 	}

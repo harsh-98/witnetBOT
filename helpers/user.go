@@ -2,7 +2,6 @@ package helpers
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/harsh-98/witnetBOT/log"
 )
@@ -30,8 +29,8 @@ func GetUserByTelegramID(tgID int64) (*UserType, error) {
 }
 
 func (d DataBaseType) AddUser(u *UserType) error {
-	str := fmt.Sprintf("insert into tblUsers values (%v, '%s', '%s', '%s', 0)", u.UserID, u.UserName, u.FirstName, u.LastName)
-	_, err := sqldb.Exec(str)
+	// safe query
+	_, err := sqldb.Query("insert into tblUsers values (?, ?, ?, ?, 0)", u.UserID, u.UserName, u.FirstName, u.LastName)
 	if err != nil {
 		log.Logger.Errorf("Error adding user to DB: %s\n\r", err)
 		return err
@@ -56,6 +55,7 @@ func (d DataBaseType) AddUser(u *UserType) error {
 }
 
 func (d DataBaseType) GetUsers() {
+	// safe query
 	rows, err := sqldb.Query("select * from tblUsers")
 	if err != nil {
 		log.Logger.Errorf("Error fetching users from DB: %s\n\r", err)
@@ -80,7 +80,10 @@ func (d DataBaseType) GetUsers() {
 				IsAdmin:   isAdmin,
 			}
 			user.Nodes = make(map[string]*string)
-			rows2, err2 := sqldb.Query(fmt.Sprintf("SELECT NodeID, NodeName FROM userNodeMap where userNodeMap.UserID=%v;", userID))
+			// Preventing sql injection
+			// dont't use fmt.Sprintf and prefer db.Query or db.Prepare
+			// https://www.calhoun.io/what-is-sql-injection-and-how-do-i-avoid-it-in-go/
+			rows2, err2 := sqldb.Query("SELECT NodeID, NodeName FROM userNodeMap where userNodeMap.UserID=?;", userID)
 			if err2 != nil {
 				log.Logger.Errorf("Error fetching nodes for user ID %v from DB: %s\n\r", userID, err2)
 				continue
@@ -114,8 +117,8 @@ func (d DataBaseType) GetUsers() {
 }
 
 func (d DataBaseType) UpdateUser(u *UserType) error {
-	str := fmt.Sprintf("update tblUsers set UserName = '%s', FirstName ='%s', LastName = '%s' where UserID = %v",
+	// safe query
+	_, err := sqldb.Query("update tblUsers set UserName=?, FirstName=?, LastName=? where UserID=?",
 		u.UserName, u.FirstName, u.LastName, u.UserID)
-	_, err := sqldb.Exec(str)
 	return err
 }
