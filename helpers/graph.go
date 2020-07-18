@@ -75,7 +75,7 @@ func addLabel(gc draw2d.GraphicContext, clr color.RGBA, text string, x, y float6
 }
 func drawLine(gc draw2d.GraphicContext, x0, y0, x1, y1 float64) {
 	// Draw a line
-	fmt.Println(x0, y0, x1, y1)
+	// fmt.Println(x0, y0, x1, y1)
 	gc.MoveTo(x0, y0)
 	gc.LineTo(x1, y1)
 	gc.Stroke()
