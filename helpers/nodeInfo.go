@@ -2,6 +2,7 @@ package helpers
 
 import (
 	"fmt"
+	"strings"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/harsh-98/witnetBOT/log"
@@ -70,32 +71,30 @@ func sendNodeDetails(tgID int64, nodeID string) {
 	str := fmt.Sprintf("`NodeID: %s\n\rNodeName: %s\n\r\n\rActive: %t\n\rReputation: %v\n\r`",
 		n.NodeID, *nodeName, n.Active, n.Reputation)
 
-	if !Config.GetBool("disableComplexQuery") {
-		// Preventing sql injection
-		rows, err := sqldb.Query(`
-			select * from 
-				(select count(epoch), sum(reward) as blockCount from blockchain where Miner=?) as T1 
-				inner join  
-				(select group_concat(epoch) as epochs  from 
-					(select * from blockchain where Miner=? order by   Epoch desc limit 5) as T) as T2 on true ;`, nodeID, nodeID)
-		// log.Logger.Debug(query)
-		if err != nil {
-			// log.Logger.Debug(err)
-			msg := tgbotapi.NewMessage(tgID, "⛔️ Fetching details for Node resulted in error")
-			TgBot.Send(msg)
-		}
-		var (
-			blockCount int
-			epoch      string
-			reward     int
-		)
-		for rows.Next() {
-			rows.Scan(&blockCount, &reward, &epoch)
-		}
-		rows.Close()
-		str += fmt.Sprintf("`BlockMinted: %v\n\rBlock submitted last 5 Epochs: %s\n\rBlock rewards : %v\n\r`",
-			blockCount, epoch, reward)
+	// Preventing sql injection
+	rows, err := sqldb.Query("select blockCount, reward, lastXEpochs from lightBlockchain where Miner=?;", nodeID)
+	// `select * from
+	// 	(select count(epoch), sum(reward) as blockCount from blockchain where Miner=?) as T1
+	// 	inner join
+	// 	(select group_concat(epoch) as epochs  from
+	// 		(select * from blockchain where Miner=? order by   Epoch desc limit 5) as T) as T2 on true ;`
+	// log.Logger.Debug(query)
+	if err != nil {
+		// log.Logger.Debug(err)
+		msg := tgbotapi.NewMessage(tgID, "⛔️ Fetching details for Node resulted in error")
+		TgBot.Send(msg)
 	}
+	var (
+		blockCount  int
+		lastXEpochs string
+		reward      int
+	)
+	for rows.Next() {
+		rows.Scan(&blockCount, &reward, &lastXEpochs)
+	}
+	rows.Close()
+	str += fmt.Sprintf("`BlockMinted: %v\n\rBlock submitted last 5 Epochs: %s\n\rBlock rewards : %v\n\r`",
+		blockCount, strings.Trim(lastXEpochs, ","), reward)
 	msg := tgbotapi.NewMessage(tgID, str)
 	msg.ParseMode = "markdown"
 	TgBot.Send(msg)

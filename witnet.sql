@@ -24,7 +24,7 @@ CREATE TABLE reputation (
 	ID INTEGER NOT NULL AUTO_INCREMENT PRIMARY KEY,
 	NodeID  varchar(50),
 	Reputation float,
-	CreateAt TIMESTAMP DEFAULT now(),
+	CreateAt TIMESTAMP DEFAULT now()
 	-- FOREIGN KEY (NodeID) REFERENCES tblNodes(NodeID)
 );
 
@@ -34,6 +34,15 @@ CREATE TABLE blockchain (
 	reward INTEGER,
 	hash varchar(130)
 );
+
+CREATE TABLE lightBlockchain (
+	latestEpoch INTEGER,
+	Miner  varchar(50) NOT NULL PRIMARY KEY,
+	reward INTEGER,
+	blockCount INTEGER,
+	lastXEpochs varchar(200)
+);
+
 
 CREATE TABLE userNodeMap (
 	UserID int,
@@ -54,3 +63,17 @@ CREATE TABLE userNodeMap (
 
 -- drop the foreign key
 --    ALTER TABLE reputation DROP FOREIGN KEY reputation_ibfk_1;
+
+-- insert into lightBlockchain(lastestEpoch, Miner, reward, blockCount, fiveEpochs) VALUES(1, "12", 10, 1, "1,2,3,4,5");
+-- update lightBlockchain set  fiveEpochs = SUBSTRING_INDEX(fiveEpochs,',', -2);
+
+-- select SUBSTRING_INDEX(lastXEpochs,',', -2) from lightBlockchain;
+
+-- INSERT INTO lightBlockchain (Miner, latestEpoch, reward, blockCount, lastXEpochs) VALUES(?, ?, ?, ?, ?) 
+-- ON DUPLICATE KEY UPDATE latestEpoch=?, reward=reward+?, blockCount =  blockCount + ?, lastXEpochs = CONCAT_WS(SUBSTRING_INDEX(lastXEpochs, ',', ?), ?, ',');
+
+-- select * from
+-- 	(select count(epoch), sum(reward) as blockCount from blockchain where Miner=?) as T1
+-- 	inner join
+-- 	(select group_concat(epoch) as epochs  from
+-- 		(select * from blockchain where Miner=? order by   Epoch desc limit 5) as T) as T2 on true ;

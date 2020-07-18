@@ -51,6 +51,7 @@ func (w *WitnetConnector) QueryRPC(msg string) RespObj {
 	}
 	return v
 }
+
 func (w *WitnetConnector) QueryRPCBlock(msg string) RespObjBlock {
 	if !strings.HasSuffix(msg, "\n") {
 		msg = fmt.Sprintf("%s\n", msg)
@@ -79,6 +80,7 @@ func (w *WitnetConnector) QueryRPCBlock(msg string) RespObjBlock {
 	}
 	return obj
 }
+
 func (w *WitnetConnector) ProcessAndUpdateDB(resp RespObj) {
 	if resp.Result == nil || resp.Error != nil {
 		log.Logger.Errorf("%v", resp)
@@ -142,18 +144,18 @@ func queryWitnet() {
 }
 func updateBlocksLB() {
 	// safe query
-	query := "select count(*) as Count , Miner from blockchain group by Miner order by count desc;"
+	query := "select blockCount , Miner from lightBlockchain  order by blockCount desc;"
 	rows, err := sqldb.Query(query)
 	if err != nil {
 		log.Logger.Error("Err in fetching the blockchain", err)
 	}
-	var count int64
+	var blockCount int64
 	var miner string
 	var nodeBlockSort NodeBlockSort
 	for rows.Next() {
-		rows.Scan(&count, &miner)
+		rows.Scan(&blockCount, &miner)
 		nodeBlockSort = append(nodeBlockSort, NodeBlock{
-			Blocks: count,
+			Blocks: blockCount,
 			NodeID: miner,
 		})
 	}
@@ -164,7 +166,7 @@ func updateBlocksLB() {
 func queryBlockchain() {
 	for {
 		// safe query
-		dbQuery := "select IFNULL(max(Epoch),0) from blockchain;"
+		dbQuery := "select IFNULL(max(latestEpoch),0) from lightBlockchain;"
 		rows, err := sqldb.Query(dbQuery)
 		if err != nil {
 			log.Logger.Errorf("Error fetching epoch from blockchain: %s\n\r", err)
@@ -196,6 +198,7 @@ func queryBlockchain() {
 			log.Logger.Error(err)
 			return
 		}
+		// if number of entries is less than limit means that we have queried the latest epoch
 		if count < limit {
 			return
 		}
@@ -222,64 +225,108 @@ type Transaction struct {
 	Pkh   string  `json:"pkh" yaml:"pkh"`
 	Value float64 `json:"value" yaml:"value"`
 }
-type Reward struct {
-	Miner string
-	Epoch float64
+type MinerDetails struct {
+	Reward float64
+	Epochs []int64
 }
 
+// returns numberofminers, error
 func (witnet *WitnetConnector) ProcessBlocks(resp RespObj) (int, error) {
 	result := resp.Result
 	epochList := result.([]interface{})
 
 	// hashEpoch := make(map[string]float64)
-	hashToReward := make(map[string]Reward)
+	minerArray := make(map[string]*MinerDetails)
 	// var blockHashes []string
 	for _, v := range epochList {
 		v := v.([]interface{})
+		// hash and epoch from each entry
 		hash := v[1].(string)
-		hashToReward[hash] = Reward{Epoch: v[0].(float64)}
-		// blockHashes = append(blockHashes, hash)
-	}
-
-	// It might happen that the hashToReward is empty
-	if len(hashToReward) == 0 {
-		return 0, errors.New("hashToReward is of 0 len")
-	}
-
-	var rows [][]interface{}
-	for hash, reward := range hashToReward {
+		epoch := int64(v[0].(float64))
+		// rpc query string
 		blockQuery := fmt.Sprintf(`{"jsonrpc": "2.0","method": "getBlock", "params": ["%s"], "id": "1"}`, hash)
+		//query the block with blockHash rpc query
 		resp := witnet.QueryRPCBlock(blockQuery)
-		result = resp.Result
+		// if querying block resulted in error
 		if resp.Error != nil {
 			return 0, errors.New(resp.Error.(string))
 		}
-		transaction := result.(Block).Txs.Mint.Outputs[0]
 		// TODO handle multiple miners of the block
+		// minerTxns := resp.Result.Txs.Mint.Outputs
+		// for _, minerTxn := range minerTxns {
+		// 	pkh := transaction.Pkh
+		// 	value := transaction.Value
+		// }
+		transaction := resp.Result.Txs.Mint.Outputs[0]
 		pkh := transaction.Pkh
-		value := transaction.Value
-		hashToReward[hash] = Reward{
-			Epoch: reward.Epoch,
-			Miner: pkh,
+		reward := transaction.Value
+		minerPtr := minerArray[pkh]
+		if minerPtr != nil {
+			minerPtr.Epochs = append(minerPtr.Epochs, epoch)
+			minerPtr.Reward += reward
+		} else {
+			minerDetails := MinerDetails{
+				Epochs: []int64{epoch},
+				Reward: reward,
+			}
+			minerArray[pkh] = &minerDetails
 		}
-		log.Logger.Tracef("block hashes: %s, pkh: %s", hash, pkh)
-		rows = append(rows, []interface{}{reward.Epoch, hash, pkh, int(value / 1000000000)})
 	}
-	err := multipleInsert("insert into blockchain (Epoch, Hash, Miner, Reward) values (?, ?, ?, ?);", rows)
+
+	// It might happen that the minerArray is empty
+	if len(minerArray) == 0 {
+		return 0, errors.New("minerArray is of 0 len")
+	}
+
+	err := saveMinerDetails(minerArray)
 	if err != nil {
 		return 0, err
 	}
 	// notifyBlockMined
 	if !Config.GetBool("disableBlockMinedNotify") {
-		for _, reward := range hashToReward {
-			for _, user := range global.NodeUsers[reward.Miner] {
-				nodeName := global.Users[user].Nodes[reward.Miner]
-				msg := tgbotapi.NewMessage(int64(user), fmt.Sprintf("`👌 #%v block was mined by your node: %s[%s]`", reward.Epoch, *nodeName, reward.Miner))
-				msg.ParseMode = "markdown"
-				TgBot.Send(msg)
+		for minerPkh, minerDetails := range minerArray {
+			for _, user := range global.NodeUsers[minerPkh] {
+				nodeName := global.Users[user].Nodes[minerPkh]
+				for _, epoch := range minerDetails.Epochs {
+					msg := tgbotapi.NewMessage(int64(user), fmt.Sprintf("`👌 #%v block was mined by your node: %s[%s]`", epoch, *nodeName, minerPkh))
+					msg.ParseMode = "markdown"
+					TgBot.Send(msg)
+					global.HighestEpoch = int(epoch)
+				}
 			}
-			global.HighestEpoch = int(reward.Epoch)
 		}
 	}
-	return len(hashToReward), nil
+	return len(epochList), nil
+}
+
+func saveMinerDetails(minerArray map[string]*MinerDetails) error {
+	var rows [][]interface{}
+	for minerPkh, miner := range minerArray {
+		var startIndex int
+		lastX := 5
+		epochsLen := len(miner.Epochs)
+		if epochsLen-lastX > 0 {
+			startIndex = epochsLen - lastX
+		}
+		// lastFiveEpochs := miner.FiveEpochs[startIndex:]
+		var highestEpoch int64
+		var lastFiveEpochs string
+		for i := startIndex; i < epochsLen; i++ {
+			if i != startIndex {
+				lastFiveEpochs += ","
+			}
+			highestEpoch = miner.Epochs[i]
+			//strconv.Itoa(123)
+			lastFiveEpochs += fmt.Sprintf("%v", miner.Epochs[i])
+		}
+
+		previousEpoch := epochsLen - startIndex - 5
+		totalReward := miner.Reward / 1000000000
+		rows = append(rows, []interface{}{minerPkh, highestEpoch, totalReward, epochsLen, lastFiveEpochs,
+			highestEpoch, totalReward, epochsLen, previousEpoch, lastFiveEpochs})
+	}
+	query := `INSERT INTO lightBlockchain (Miner, latestEpoch, reward, blockCount, lastXEpochs) VALUES(?, ?, ?, ?, ?) 
+	ON DUPLICATE KEY 
+	UPDATE latestEpoch=?, reward=reward+?, blockCount =  blockCount + ?, lastXEpochs = CONCAT(SUBSTRING_INDEX(lastXEpochs, ',', ?), ',', ?);`
+	return multipleInsert(query, rows)
 }
