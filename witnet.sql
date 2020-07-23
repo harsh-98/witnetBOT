@@ -13,6 +13,13 @@ CREATE TABLE tblUsers (
 	PRIMARY KEY (UserID)
 );
 
+ALTER TABLE witnet.tblUsers MODIFY COLUMN UserName VARCHAR(255)
+    CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
+ALTER TABLE witnet.tblUsers MODIFY COLUMN FirstName VARCHAR(255)
+    CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
+ALTER TABLE witnet.tblUsers MODIFY COLUMN LastName VARCHAR(255)
+    CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
+
 CREATE TABLE tblNodes (
 	NodeID  varchar(50),
 	Active bool,
@@ -63,6 +70,7 @@ CREATE TABLE userNodeMap (
 
 -- drop the foreign key
 --    ALTER TABLE reputation DROP FOREIGN KEY reputation_ibfk_1;
+-- delete from reputation where CreateAt < DATE_SUB(NOW(), INTERVAL 24 HOUR);
 
 -- insert into lightBlockchain(lastestEpoch, Miner, reward, blockCount, fiveEpochs) VALUES(1, "12", 10, 1, "1,2,3,4,5");
 -- update lightBlockchain set  fiveEpochs = SUBSTRING_INDEX(fiveEpochs,',', -2);
@@ -77,3 +85,15 @@ CREATE TABLE userNodeMap (
 -- 	inner join
 -- 	(select group_concat(epoch) as epochs  from
 -- 		(select * from blockchain where Miner=? order by   Epoch desc limit 5) as T) as T2 on true ;
+
+-- leaderboard with most mined blocks per user
+-- select sum(blockCount) as _count , u.UserID, u.firstname, (sum(blockCount)/11540) as Percentage, count(*) as NodeNumber from tblUsers u  inner join userNodeMap n inner join lightBlockchain b where n.UserID = u.UserID and n.NodeID = b.Miner group by u.UserID  order by _count desc;
+-- select sum(_count ) from U;
+
+-- ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY '';
+-- -- https://stackoverflow.com/questions/43094726/your-password-does-not-satisfy-the-current-policy-requirements
+-- SET GLOBAL validate_password_policy=LOW;
+
+--  CREATE USER 'network'@'localhost' IDENTIFIED BY '';
+-- GRANT ALL PRIVILEGES ON witnet.* TO 'network'@'localhost' WITH GRANT OPTION;
+

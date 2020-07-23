@@ -315,7 +315,9 @@ func saveMinerDetails(minerArray map[string]*MinerDetails) error {
 			if i != startIndex {
 				lastFiveEpochs += ","
 			}
-			highestEpoch = miner.Epochs[i]
+			if miner.Epochs[i] > highestEpoch {
+				highestEpoch = miner.Epochs[i]
+			}
 			//strconv.Itoa(123)
 			lastFiveEpochs += fmt.Sprintf("%v", miner.Epochs[i])
 		}
