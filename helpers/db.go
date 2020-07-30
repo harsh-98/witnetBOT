@@ -18,7 +18,7 @@ type dataBaseInterface interface {
 	AddUser(u *UserType) error
 	UpdateUser(u *UserType) error
 	RemoveUserNode(nodeID string, userID int64) error
-	AddUserNode(n UserNode) (NodeType, error)
+	AddUserNode(n UserNode) (NodeRepDetails, error)
 }
 
 type DataBaseType struct {
@@ -55,7 +55,8 @@ func (d DataBaseType) Init() error {
 		return err
 	}
 	d.GetUsers()
-	d.GetNodes()
+	d.GetNodeRep()
+	GetNodeBlk()
 	return nil
 }
 

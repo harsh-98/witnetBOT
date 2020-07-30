@@ -151,7 +151,7 @@ func addNodes(message *tgbotapi.Message) {
 	extra := " ```   I am watching 🧐 for these nodes , will notify if added to reputation list.\n\n   Meanwhile go have some water 🚰.```"
 	if err == nil {
 		for _, key := range keys {
-			if global.Nodes[key] == nil {
+			if global.NodeRepMap[key] == nil {
 				nodeStatus += fmt.Sprintf("key: %s is not in reputation list \n", key)
 			} else {
 				repNodeStatus += fmt.Sprintf("key: %s is in reputation list \n", key)

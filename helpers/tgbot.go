@@ -83,7 +83,6 @@ func CallbackQueryReceived(cb *tgbotapi.CallbackQuery) {
 		sendReputationBoard(int64(cb.From.ID))
 	}
 	if cb.Data == "BlockBoard" {
-		fmt.Println("in block board")
 		TgBot.AnswerCallbackQuery(tgbotapi.NewCallback(cb.ID, "Block Board"))
 		sendBlocksBoard(int64(cb.From.ID))
 	}
@@ -130,8 +129,11 @@ func CommandReceived(update tgbotapi.Update) {
 			dbUser.FirstName = update.Message.From.FirstName
 			dbUser.LastName = update.Message.From.LastName
 			err := DB.UpdateUser(dbUser)
+			ReportToAdmins(fmt.Sprintf("🧝‍♂️ Updated user: '%v' '%s' '%s' '%s'\n\r",
+				update.Message.From.ID, update.Message.From.UserName, update.Message.From.FirstName, update.Message.From.LastName))
 			if err != nil {
 				ReportToAdmins(fmt.Sprintf("⛔️ An error occured while updating user ID %v in DB: %s", dbUser.UserID, err))
+				return
 			}
 		}
 	} else {

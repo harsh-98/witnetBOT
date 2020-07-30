@@ -81,7 +81,7 @@ func (w *WitnetConnector) QueryRPCBlock(msg string) RespObjBlock {
 	return obj
 }
 
-func (w *WitnetConnector) ProcessAndUpdateDB(resp RespObj) {
+func (w *WitnetConnector) updateReputationLB(resp RespObj) {
 	if resp.Result == nil || resp.Error != nil {
 		log.Logger.Errorf("%v", resp)
 		return
@@ -89,26 +89,27 @@ func (w *WitnetConnector) ProcessAndUpdateDB(resp RespObj) {
 	result := resp.Result
 	switch result.(type) {
 	case map[string]interface{}:
-		nodes := make(map[string]*NodeType)
+		nodeRepMap := make(map[string]*NodeRepDetails)
 		var nodeRepSort NodeRepSort
-		for k, v := range result.(map[string]interface{}) { // use type assertion to loop over map[string]interface{}
-			n := NodeType{
-				NodeID:     k,
+		for nodeID, v := range result.(map[string]interface{}) { // use type assertion to loop over map[string]interface{}
+
+			n := NodeRepDetails{
+				NodeID:     nodeID,
 				Active:     v.([]interface{})[1].(bool),
 				Reputation: v.([]interface{})[0].(float64),
 			}
-			if global.Nodes[n.NodeID] == nil {
-				notifyNodeHasReputation(n.NodeID)
+			if global.NodeRepMap[nodeID] == nil {
+				notifyNodeHasReputation(nodeID)
 			}
-			nodes[n.NodeID] = &n
+			nodeRepMap[nodeID] = &n
 			nodeRepSort = append(nodeRepSort, n)
 		}
 		sort.Sort(nodeRepSort)
-		global.Nodes = nodes
+		global.NodeRepMap = nodeRepMap
 		global.ReputationLB = nodeRepSort
 
 		// log.Logger.Debugf("%+v", global.ReputationLB)
-		DB.AddNodesInTable(nodes)
+		DB.updateReputationDB(nodeRepMap)
 	}
 }
 
@@ -137,32 +138,47 @@ func QueryWorker() {
 func queryWitnet() {
 	witnet.Address = Config.GetString("servAddr")
 	resp := witnet.QueryRPC(`{"jsonrpc": "2.0","method": "getReputationAll", "id": "1"}`)
-	witnet.ProcessAndUpdateDB(resp)
+	witnet.updateReputationLB(resp)
 	queryBlockchain()
-	updateBlocksLB()
+	GetNodeBlk()
 
 }
-func updateBlocksLB() {
+
+func GetNodeBlk() error {
 	// safe query
-	query := "select blockCount , Miner from lightBlockchain  order by blockCount desc;"
+	query := "select blockCount , Miner, lastXEpochs, reward from lightBlockchain  order by blockCount desc;"
 	rows, err := sqldb.Query(query)
 	if err != nil {
-		log.Logger.Error("Err in fetching the blockchain", err)
+		log.Logger.Error("Err in querying lightblockchain", err)
+		return err
 	}
 	var blockCount int64
-	var miner string
-	var nodeBlockSort NodeBlockSort
+	var reward float64
+	var miner, lastXEpochs string
+	var nodeBlkSort NodeBlkSort
+	nodeBlkMap := make(map[string]NodeBlkDetails)
 	for rows.Next() {
-		rows.Scan(&blockCount, &miner)
-		nodeBlockSort = append(nodeBlockSort, NodeBlock{
-			Blocks: blockCount,
-			NodeID: miner,
-		})
+		err = rows.Scan(&blockCount, &miner, &lastXEpochs, &reward)
+		if err != nil {
+			log.Logger.Errorf("Error reading row  from  lightblockchain: %s\n\r", err)
+			continue
+		}
+		n := NodeBlkDetails{
+			Blocks:      blockCount,
+			NodeID:      miner,
+			LastXEpochs: lastXEpochs,
+			Reward:      reward,
+		}
+		nodeBlkMap[miner] = n
+		nodeBlkSort = append(nodeBlkSort, n)
 	}
-	log.Logger.Debug(len(nodeBlockSort))
-	log.Logger.Trace(nodeBlockSort)
-	global.BlocksLB = nodeBlockSort
+	log.Logger.Debug(len(nodeBlkSort))
+	log.Logger.Trace(nodeBlkSort)
+	global.NodeBlkMap = nodeBlkMap
+	global.BlocksLB = nodeBlkSort
+	return nil
 }
+
 func queryBlockchain() {
 	for {
 		// safe query

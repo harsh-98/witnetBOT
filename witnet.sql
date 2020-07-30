@@ -12,19 +12,18 @@ CREATE TABLE tblUsers (
 	IsAdmin bool,
 	PRIMARY KEY (UserID)
 );
-
+-- https://stackoverflow.com/questions/1049728/how-do-i-see-what-character-set-a-mysql-database-table-column-is
 ALTER TABLE witnet.tblUsers MODIFY COLUMN UserName VARCHAR(255)
-    CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
+    CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
 ALTER TABLE witnet.tblUsers MODIFY COLUMN FirstName VARCHAR(255)
-    CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
+    CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
 ALTER TABLE witnet.tblUsers MODIFY COLUMN LastName VARCHAR(255)
-    CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
+    CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
 
 CREATE TABLE tblNodes (
 	NodeID  varchar(50),
 	Active bool,
 	Reputation float,
-	Blocks int,
 	PRIMARY KEY (NodeID)
 );
 CREATE TABLE reputation (
@@ -45,7 +44,7 @@ CREATE TABLE blockchain (
 CREATE TABLE lightBlockchain (
 	latestEpoch INTEGER,
 	Miner  varchar(50) NOT NULL PRIMARY KEY,
-	reward INTEGER,
+	reward float,
 	blockCount INTEGER,
 	lastXEpochs varchar(200)
 );
@@ -87,7 +86,7 @@ CREATE TABLE userNodeMap (
 -- 		(select * from blockchain where Miner=? order by   Epoch desc limit 5) as T) as T2 on true ;
 
 -- leaderboard with most mined blocks per user
--- select sum(blockCount) as _count , u.UserID, u.firstname, (sum(blockCount)/11540) as Percentage, count(*) as NodeNumber from tblUsers u  inner join userNodeMap n inner join lightBlockchain b where n.UserID = u.UserID and n.NodeID = b.Miner group by u.UserID  order by _count desc;
+-- select sum(blockCount) as _count , u.UserID, u.UserName, u.firstname, (sum(blockCount)/(select sum(blockCount) from lightBlockchain)) as Percentage, count(*) as NodeNumber from tblUsers u  inner join userNodeMap n inner join lightBlockchain b where n.UserID = u.UserID and n.NodeID = b.Miner group by u.UserID  order by _count desc;
 -- select sum(_count ) from U;
 
 -- ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY '';
@@ -97,3 +96,8 @@ CREATE TABLE userNodeMap (
 --  CREATE USER 'network'@'localhost' IDENTIFIED BY '';
 -- GRANT ALL PRIVILEGES ON witnet.* TO 'network'@'localhost' WITH GRANT OPTION;
 
+-- checking character set of the table column
+-- SELECT character_set_name FROM information_schema.`COLUMNS` 
+-- WHERE table_schema = "witnet"
+--   AND table_name = "tblUsers"
+--   AND column_name = "FirstName";

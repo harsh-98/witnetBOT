@@ -97,7 +97,7 @@ func (d DataBaseType) GetUsers() {
 				// hence overwriting with last value
 				var nodeName string
 				err2 := rows2.Scan(&nodeID, &nodeName)
-				log.Logger.Debugf("Add %s for %v: Name %s", nodeID, userID, nodeName)
+				log.Logger.Tracef("Add %s for %v: Name %s", nodeID, userID, nodeName)
 				if err2 == nil {
 					user.Nodes[nodeID] = &nodeName
 					global.NodeUsers[nodeID] = append(global.NodeUsers[nodeID], userID)

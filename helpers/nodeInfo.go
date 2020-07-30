@@ -18,30 +18,35 @@ func sendNodesStats(tgID int64, dbUser *UserType) {
 	}
 	i := 0
 	for nodeID, nodeName := range dbUser.Nodes {
-		n := global.Nodes[nodeID]
+		n := global.NodeRepMap[nodeID]
 		log.Logger.Debug("Nodeid ", nodeID, " Node: ", n, " Name: ", *nodeName)
 		var status string
 		if n == nil {
 			if !Config.GetBool("allowReputationNilNodeStats") {
 				continue
 			}
-			n = &NodeType{NodeID: nodeID}
+			n = &NodeRepDetails{NodeID: nodeID}
 		}
 		if n.Active {
 			status = "Active ✅"
 		} else {
 			status = "Not Active ⭕️"
 		}
-
+		miningDetails := global.NodeBlkMap[nodeID]
 		// nodeStats string
 		str := fmt.Sprintf("`Node %v/%v - %s\n\r\n\r"+
 			"ID: %s\n\r"+
 			"Name: %s \n\r"+
-			"Reputation: %v`", i+1, nLen, status, n.NodeID, *nodeName, n.Reputation)
+			"Reputation: %v\n\r"+
+			// Block details
+			"BlockMinted: %v\n\r"+
+			"Block submitted last 5 Epochs: %s\n\r"+
+			"Block rewards : %v\n\r`", i+1, nLen, status, n.NodeID, *nodeName, n.Reputation,
+			miningDetails.Blocks, miningDetails.LastXEpochs, miningDetails.Reward)
 
 		// add buttons for node
 		var buttons []tgbotapi.InlineKeyboardButton
-		buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData("📖 Details", fmt.Sprintf(":NodeDetails_%v", n.NodeID)))
+		// buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData("📖 Details", fmt.Sprintf(":NodeDetails_%v", n.NodeID)))
 		if *nodeName == "" {
 			buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData("✍️ Name It", fmt.Sprintf(":NodeNameIt_%v", n.NodeID)))
 		}
@@ -61,10 +66,10 @@ func sendNodesStats(tgID int64, dbUser *UserType) {
 }
 
 func sendNodeDetails(tgID int64, nodeID string) {
-	n := global.Nodes[nodeID]
+	n := global.NodeRepMap[nodeID]
 	nodeName := global.Users[tgID].Nodes[nodeID]
 	if n == nil {
-		n = &NodeType{
+		n = &NodeRepDetails{
 			NodeID: nodeID,
 		}
 	}

@@ -8,14 +8,7 @@ import (
 	"github.com/harsh-98/witnetBOT/log"
 )
 
-type NodeType struct {
-	Reputation float64
-	NodeID     string
-	Blocks     int32
-	Active     bool
-}
-
-func (d *DataBaseType) AddNodesInTable(nodes map[string]*NodeType) error {
+func (d *DataBaseType) updateReputationDB(nodes map[string]*NodeRepDetails) error {
 	loc, _ := time.LoadLocation("UTC")
 	t := time.Now().In(loc)
 	log.Logger.Infof(" number of nodes: %v", len(nodes))
@@ -30,11 +23,11 @@ func (d *DataBaseType) AddNodesInTable(nodes map[string]*NodeType) error {
 	// insert rows in reputation and tblNodes
 	var tblNodeRows, reputationRows [][]interface{}
 	for _, node := range nodes {
-		tblNodeRows = append(tblNodeRows, []interface{}{node.NodeID, node.Active, node.Reputation, node.Blocks, node.Active, node.Reputation})
+		tblNodeRows = append(tblNodeRows, []interface{}{node.NodeID, node.Active, node.Reputation, node.Active, node.Reputation})
 		reputationRows = append(reputationRows, []interface{}{node.NodeID, node.Reputation, t.Format(TIMEFORMAT)})
 	}
 
-	err = multipleInsert("INSERT INTO tblNodes (NodeID, Active, Reputation, Blocks) VALUES(?, ?, ?, ?) ON DUPLICATE KEY UPDATE Active=?, Reputation=?;", tblNodeRows)
+	err = multipleInsert("INSERT INTO tblNodes (NodeID, Active, Reputation) VALUES(?, ?, ?) ON DUPLICATE KEY UPDATE Active=?, Reputation=?;", tblNodeRows)
 	if err != nil {
 		log.Logger.Errorf("DB: Error adding tblNodes: %s\n\r", err)
 		return err
@@ -47,9 +40,9 @@ func (d *DataBaseType) AddNodesInTable(nodes map[string]*NodeType) error {
 	return nil
 }
 
-func (d DataBaseType) GetNodes() error {
+func (d DataBaseType) GetNodeRep() error {
 	// safe query
-	rows, err := sqldb.Query("select * from tblNodes order by Reputation desc")
+	rows, err := sqldb.Query("select NodeID, Active, Reputation from tblNodes order by Reputation desc")
 	if err != nil {
 		log.Logger.Errorf("Error fetching nodes from DB: %s\n\r", err)
 		return nil
@@ -58,30 +51,28 @@ func (d DataBaseType) GetNodes() error {
 		nodeID     string
 		active     bool
 		reputation float64
-		blocks     int32
 	)
-	// with := {} is appended, is var is used then var nodes map[string]*NodeType
-	nodes := map[string]*NodeType{}
+	// when := {} syntax is used, other way var nodes map[string]*NodeRepDetails
+	nodeRepMap := map[string]*NodeRepDetails{}
 	var nodeRepSort NodeRepSort
 	for rows.Next() {
-		err := rows.Scan(&nodeID, &active, &reputation, &blocks)
+		err := rows.Scan(&nodeID, &active, &reputation)
 
 		if err != nil {
 			log.Logger.Errorf("Error reading node row  from  DB: %s\n\r", err)
 			continue
 		}
-		n := NodeType{
+		n := NodeRepDetails{
 			NodeID:     nodeID,
 			Active:     active,
 			Reputation: reputation,
-			Blocks:     blocks,
 		}
-		nodes[nodeID] = &n
+		nodeRepMap[nodeID] = &n
 		nodeRepSort = append(nodeRepSort, n)
 	}
 	rows.Close()
-	log.Logger.Infof("Adding %v nodes", len(nodes))
-	global.Nodes = nodes
+	log.Logger.Infof("Adding Rep of %v nodes", len(nodeRepMap))
+	global.NodeRepMap = nodeRepMap
 	global.ReputationLB = nodeRepSort
 	return nil
 }

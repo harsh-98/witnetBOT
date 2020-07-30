@@ -108,7 +108,7 @@ func GenerateGraph(tgID int64) error {
 	}
 	exitReturn := true
 	for _, v := range nodeIDs {
-		if global.Nodes[v] != nil {
+		if global.NodeRepMap[v] != nil {
 			exitReturn = false
 		}
 	}
@@ -176,7 +176,7 @@ func GenerateGraph(tgID int64) error {
 		TgBot.Send(msg)
 		return nil
 	}
-	log.Logger.Debugf("User id %v with %v nodes with min  %v  and max %v reputation", tgID, nLen, maxY, minY)
+	log.Logger.Debugf("User id %v with %v nodes with min  %v  and max %v reputation", tgID, nLen, minY, maxY)
 	// set Y min , max coordinate
 	diff := int64(float64(maxY-minY) * 0.05)
 	maxY = maxY + diff

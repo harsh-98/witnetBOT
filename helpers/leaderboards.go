@@ -8,9 +8,15 @@ import (
 	"github.com/harsh-98/witnetBOT/log"
 )
 
+type NodeRepDetails struct {
+	Reputation float64
+	NodeID     string
+	Active     bool
+}
+
 // {} with type not need
 // reputation leaderboard list
-type NodeRepSort []NodeType
+type NodeRepSort []NodeRepDetails
 
 func (s NodeRepSort) Len() int {
 	return len(s)
@@ -23,19 +29,21 @@ func (s NodeRepSort) Less(i, j int) bool {
 }
 
 // blocks count leaderboard list
-type NodeBlock struct {
-	Blocks int64
-	NodeID string
+type NodeBlkDetails struct {
+	Blocks      int64
+	NodeID      string
+	LastXEpochs string
+	Reward      float64
 }
-type NodeBlockSort []NodeBlock
+type NodeBlkSort []NodeBlkDetails
 
-func (s NodeBlockSort) Len() int {
+func (s NodeBlkSort) Len() int {
 	return len(s)
 }
-func (s NodeBlockSort) Swap(i, j int) {
+func (s NodeBlkSort) Swap(i, j int) {
 	s[i], s[j] = s[j], s[i]
 }
-func (s NodeBlockSort) Less(i, j int) bool {
+func (s NodeBlkSort) Less(i, j int) bool {
 	return s[i].Blocks > s[j].Blocks
 }
 

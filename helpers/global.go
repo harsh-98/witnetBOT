@@ -3,14 +3,16 @@ package helpers
 import "github.com/spf13/viper"
 
 type Global struct {
-	// nodes having reputation
-	Nodes map[string]*NodeType
+	// nodes detials
+	NodeRepMap map[string]*NodeRepDetails
+	// node has reputation
+	NodeBlkMap map[string]NodeBlkDetails
 	// users registered with the bot
 	Users map[int64]*UserType
 	// stores the nodeid with their reputation
 	ReputationLB NodeRepSort
 	// stores the nodeid with block minted by that id
-	BlocksLB NodeBlockSort
+	BlocksLB NodeBlkSort
 	// stores the list of users subscripted for a node
 	NodeUsers map[string][]int64
 	// stores the admin list
@@ -23,9 +25,10 @@ type Global struct {
 // trying to query or update nil map will error
 var global = Global{
 	Users:        make(map[int64]*UserType),
-	Nodes:        make(map[string]*NodeType),
+	NodeRepMap:   make(map[string]*NodeRepDetails),
+	NodeBlkMap:   make(map[string]NodeBlkDetails),
 	ReputationLB: NodeRepSort{},
-	BlocksLB:     NodeBlockSort{},
+	BlocksLB:     NodeBlkSort{},
 	Admin:        []*UserType{},
 	NodeUsers:    make(map[string][]int64),
 }
