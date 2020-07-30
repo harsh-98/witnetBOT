@@ -19,6 +19,12 @@ func (d *DataBaseType) updateReputationDB(nodes map[string]*NodeRepDetails) erro
 		log.Logger.Errorf("DB: Failed truncating tblNodes: %s\n\r", err)
 		return err
 	}
+	// delete old reputation entries
+	_, err = sqldb.Query("delete from reputation where CreateAt < DATE_SUB(NOW(), INTERVAL 24 HOUR);")
+	if err != nil {
+		log.Logger.Errorf("DB: Failed deleting 24 hr old reputations: %s\n\r", err)
+		return err
+	}
 
 	// insert rows in reputation and tblNodes
 	var tblNodeRows, reputationRows [][]interface{}
