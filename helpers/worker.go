@@ -307,7 +307,9 @@ func (witnet *WitnetConnector) ProcessBlocks(resp RespObj) (int, error) {
 					msg := tgbotapi.NewMessage(int64(user), fmt.Sprintf("`👌 #%v block was mined by your node: %s[%s]`", epoch, *nodeName, minerPkh))
 					msg.ParseMode = "markdown"
 					TgBot.Send(msg)
-					global.HighestEpoch = int(epoch)
+					if int(epoch) > global.HighestEpoch {
+						global.HighestEpoch = int(epoch)
+					}
 				}
 			}
 		}

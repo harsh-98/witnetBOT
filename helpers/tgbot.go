@@ -2,9 +2,11 @@
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
+	"github.com/harsh-98/witnetBOT/log"
 )
 
 const welcomeMessage = "Hello\n\r\n\r" +
@@ -80,11 +82,11 @@ func CallbackQueryReceived(cb *tgbotapi.CallbackQuery) {
 	}
 	if cb.Data == "ReputationBoard" {
 		TgBot.AnswerCallbackQuery(tgbotapi.NewCallback(cb.ID, "Reputation Board"))
-		sendReputationBoard(int64(cb.From.ID))
+		sendReputationBoard(int64(cb.From.ID), int64(cb.From.ID))
 	}
 	if cb.Data == "BlockBoard" {
 		TgBot.AnswerCallbackQuery(tgbotapi.NewCallback(cb.ID, "Block Board"))
-		sendBlocksBoard(int64(cb.From.ID))
+		sendBlocksBoard(int64(cb.From.ID), int64(cb.From.ID))
 	}
 	if cb.Data[0] == ':' {
 		TgBot.AnswerCallbackQuery(tgbotapi.NewCallback(cb.ID, "Ok"))
@@ -154,9 +156,52 @@ func CommandReceived(update tgbotapi.Update) {
 		}
 		global.Users[dbUser.UserID] = dbUser
 	}
+
+	log.Logger.Debug(update.Message.CommandArguments())
 	if update.Message.Command() == "start" { // && update.Message.Chat.IsPrivate() {
 		startCommandReceived(update.Message.From)
+	} else if update.Message.Command() == "admin" {
+		err = adminActionCmd(update.Message)
+		if err != nil {
+			msg := tgbotapi.NewMessage(int64(update.Message.From.ID), welcomeMessage)
+			msg.ParseMode = "HTML"
+			TgBot.Send(msg)
+		}
 	}
+}
+
+func adminActionCmd(msg *tgbotapi.Message) error {
+	tgUser := msg.From
+	for _, u := range global.Admin {
+		// check if user is admin
+		if u.UserID == int64(tgUser.ID) {
+			argStr := msg.CommandArguments()
+			args := strings.Split(argStr, " ")
+			// check length of arguments to command
+			if len(args) < 2 {
+				return fmt.Errorf("Args len is %v", len(args))
+			}
+			// function name and mimicUserID
+			funcName := args[0]
+			id, err := strconv.Atoi(args[1])
+			if err != nil {
+				return err
+			}
+			mimicUserID := int64(id)
+
+			// switch for function calls
+			switch funcName {
+			case "repLB":
+				sendReputationBoard(mimicUserID, int64(tgUser.ID))
+			case "blkLB":
+				sendBlocksBoard(mimicUserID, int64(tgUser.ID))
+			default:
+				return fmt.Errorf("Function not defined %s", funcName)
+			}
+		}
+	}
+	mainMenu(tgUser)
+	return nil
 }
 
 func startCommandReceived(tgUser *tgbotapi.User) {

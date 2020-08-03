@@ -56,40 +56,53 @@ func checkUsersNode(v string, list map[string]*string) bool {
 
 var medal = []string{"🥇", "🥈", "🥉"}
 
-func sendReputationBoard(tgID int64) {
+func sendReputationBoard(tgID, rcvrID int64) {
 	nLen := len(global.ReputationLB)
 
 	str := fmt.Sprintf("🏆 *Reputation 🎖 LeaderBoard* (Nodes with reputation: %v) \n\n", nLen)
 
 	first3 := int(math.Min(3, float64(nLen)))
+
+	// user nodes
+	userNodes := make(map[string]*string)
+	if global.Users[tgID] != nil {
+		userNodes = global.Users[tgID].Nodes
+	}
 	for i := 0; i < first3; i++ {
 
 		var isUserNode string
 		nodeID := global.ReputationLB[i].NodeID
-		if checkUsersNode(nodeID, global.Users[tgID].Nodes) {
-			isUserNode = fmt.Sprintf("(Your node) %s", *(global.Users[tgID].Nodes[nodeID]))
+		if checkUsersNode(nodeID, userNodes) {
+			isUserNode = fmt.Sprintf("(Your node) %s", *(userNodes[nodeID]))
 		}
 		str += fmt.Sprintf("`%s\n\r%s %v - %s\n\rReputation: %v \n\r`\n\n", isUserNode, medal[i], i+1, nodeID, global.ReputationLB[i].Reputation)
 	}
 	for i := 3; i < nLen; i++ {
 		nodeID := global.ReputationLB[i].NodeID
-		if checkUsersNode(nodeID, global.Users[tgID].Nodes) {
-			isUserNode := fmt.Sprintf("(Your node) %s", *(global.Users[tgID].Nodes[nodeID]))
+		if checkUsersNode(nodeID, userNodes) {
+			isUserNode := fmt.Sprintf("(Your node) %s", *(userNodes[nodeID]))
 			str += fmt.Sprintf("`%s\n\r%v - %s\n\rReputation: %v \n\r`\n\n", isUserNode, i+1, nodeID, global.ReputationLB[i].Reputation)
 		}
 	}
-	msg := tgbotapi.NewMessage(int64(tgID), str)
+	msg := tgbotapi.NewMessage(rcvrID, str)
 	msg.ParseMode = "markdown"
 	TgBot.Send(msg)
 
 }
 
-func sendBlocksBoard(tgID int64) {
+func sendBlocksBoard(tgID, rcvrID int64) {
 	nLen := len(global.BlocksLB)
 	var entries string
 	log.Logger.Debugf("Block Leaderboard: %v", global.HighestEpoch)
 
 	first3 := int(math.Min(3, float64(nLen)))
+
+	// user nodes
+	userNodes := make(map[string]*string)
+	if global.Users[tgID] != nil {
+		userNodes = global.Users[tgID].Nodes
+	}
+
 	// userBlockCount: Total block minted by all the nodes of user
 	// totalBlockCount: Total block minted by the network
 	// global.HighestEpoch: Number of epoch passed
@@ -99,9 +112,9 @@ func sendBlocksBoard(tgID int64) {
 		var isUserNode string
 		nodeID := global.BlocksLB[i].NodeID
 		blockPerNode := global.BlocksLB[i].Blocks
-		if checkUsersNode(nodeID, global.Users[tgID].Nodes) {
+		if checkUsersNode(nodeID, userNodes) {
 			userBlockCount += blockPerNode
-			isUserNode = fmt.Sprintf("(Your node) %s", *(global.Users[tgID].Nodes[nodeID]))
+			isUserNode = fmt.Sprintf("(Your node) %s", *(userNodes[nodeID]))
 		}
 		totalBlockCount += blockPerNode
 		entries += fmt.Sprintf("`%s\n\r%s %v - %s\n\rBlocks mined: %v \n\r`\n\n", isUserNode, medal[i], i+1, nodeID, blockPerNode)
@@ -112,16 +125,16 @@ func sendBlocksBoard(tgID int64) {
 		blockPerNode := global.BlocksLB[i].Blocks
 		totalBlockCount += blockPerNode
 		nodeID := global.BlocksLB[i].NodeID
-		if checkUsersNode(nodeID, global.Users[tgID].Nodes) {
+		if checkUsersNode(nodeID, userNodes) {
 			userBlockCount += blockPerNode
-			isUserNode := fmt.Sprintf("(Your node) %s", *(global.Users[tgID].Nodes[nodeID]))
+			isUserNode := fmt.Sprintf("(Your node) %s", *(userNodes[nodeID]))
 			entries += fmt.Sprintf("`%s\n\r%v - %s\n\rBlocks mined: %v \n\r`\n\n", isUserNode, i+1, nodeID, blockPerNode)
 		}
 	}
 	header := fmt.Sprintf("🏆*Mining 🔨 LeaderBoard* (Max epoch: %v, Mined block: %v)\n\n\r `(Total Blocks mined by your nodes: %v)`\n\n",
 		global.HighestEpoch, totalBlockCount, userBlockCount)
 
-	msg := tgbotapi.NewMessage(int64(tgID), header+entries)
+	msg := tgbotapi.NewMessage(rcvrID, header+entries)
 	msg.ParseMode = "markdown"
 	TgBot.Send(msg)
 }
