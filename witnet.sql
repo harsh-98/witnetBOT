@@ -58,6 +58,8 @@ CREATE TABLE userNodeMap (
 	-- FOREIGN KEY (NodeID) REFERENCES tblNodes(NodeID),
 	FOREIGN KEY (UserID) REFERENCES tblUsers(UserID)
 );
+ALTER TABLE witnet.userNodeMap MODIFY COLUMN NodeName VARCHAR(255)
+    CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
 
 -- ALTER TABLE blockchain ADD reward INTEGER;
 -- table name is case-sensitive use camel case.

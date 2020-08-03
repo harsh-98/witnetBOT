@@ -59,7 +59,7 @@ var medal = []string{"🥇", "🥈", "🥉"}
 func sendReputationBoard(tgID, rcvrID int64) {
 	nLen := len(global.ReputationLB)
 
-	str := fmt.Sprintf("🏆 *Reputation 🎖 LeaderBoard* (Nodes with reputation: %v) \n\n", nLen)
+	entry := fmt.Sprintf("🏆 *Reputation 🎖 LeaderBoard* (Nodes with reputation: %v) \n\n", nLen)
 
 	first3 := int(math.Min(3, float64(nLen)))
 
@@ -68,6 +68,9 @@ func sendReputationBoard(tgID, rcvrID int64) {
 	if global.Users[tgID] != nil {
 		userNodes = global.Users[tgID].Nodes
 	}
+
+	// msg array , with each message length less than 4096
+	var entries []string
 	for i := 0; i < first3; i++ {
 
 		var isUserNode string
@@ -75,24 +78,36 @@ func sendReputationBoard(tgID, rcvrID int64) {
 		if checkUsersNode(nodeID, userNodes) {
 			isUserNode = fmt.Sprintf("(Your node) %s", *(userNodes[nodeID]))
 		}
-		str += fmt.Sprintf("`%s\n\r%s %v - %s\n\rReputation: %v \n\r`\n\n", isUserNode, medal[i], i+1, nodeID, global.ReputationLB[i].Reputation)
+		entry += fmt.Sprintf("`%s\n\r%s %v - %s\n\rReputation: %v \n\r`\n\n", isUserNode, medal[i], i+1, nodeID, global.ReputationLB[i].Reputation)
+		if len(entry) > 3800 {
+			entries = append(entries, entry)
+			entry = ""
+		}
 	}
 	for i := 3; i < nLen; i++ {
 		nodeID := global.ReputationLB[i].NodeID
 		if checkUsersNode(nodeID, userNodes) {
 			isUserNode := fmt.Sprintf("(Your node) %s", *(userNodes[nodeID]))
-			str += fmt.Sprintf("`%s\n\r%v - %s\n\rReputation: %v \n\r`\n\n", isUserNode, i+1, nodeID, global.ReputationLB[i].Reputation)
+			entry += fmt.Sprintf("`%s\n\r%v - %s\n\rReputation: %v \n\r`\n\n", isUserNode, i+1, nodeID, global.ReputationLB[i].Reputation)
+			if len(entry) > 3800 {
+				entries = append(entries, entry)
+				entry = ""
+			}
 		}
 	}
-	msg := tgbotapi.NewMessage(rcvrID, str)
-	msg.ParseMode = "markdown"
-	TgBot.Send(msg)
-
+	if len(entry) > 0 {
+		entries = append(entries, entry)
+	}
+	for _, _entry := range entries {
+		msg := tgbotapi.NewMessage(rcvrID, _entry)
+		msg.ParseMode = "markdown"
+		TgBot.Send(msg)
+	}
 }
 
 func sendBlocksBoard(tgID, rcvrID int64) {
 	nLen := len(global.BlocksLB)
-	var entries string
+	var entry string
 	log.Logger.Debugf("Block Leaderboard: %v", global.HighestEpoch)
 
 	first3 := int(math.Min(3, float64(nLen)))
@@ -102,6 +117,7 @@ func sendBlocksBoard(tgID, rcvrID int64) {
 	if global.Users[tgID] != nil {
 		userNodes = global.Users[tgID].Nodes
 	}
+	var entries []string
 
 	// userBlockCount: Total block minted by all the nodes of user
 	// totalBlockCount: Total block minted by the network
@@ -117,8 +133,11 @@ func sendBlocksBoard(tgID, rcvrID int64) {
 			isUserNode = fmt.Sprintf("(Your node) %s", *(userNodes[nodeID]))
 		}
 		totalBlockCount += blockPerNode
-		entries += fmt.Sprintf("`%s\n\r%s %v - %s\n\rBlocks mined: %v \n\r`\n\n", isUserNode, medal[i], i+1, nodeID, blockPerNode)
-
+		entry += fmt.Sprintf("`%s\n\r%s %v - %s\n\rBlocks mined: %v \n\r`\n\n", isUserNode, medal[i], i+1, nodeID, blockPerNode)
+		if len(entry) > 3800 {
+			entries = append(entries, entry)
+			entry = ""
+		}
 	}
 
 	for i := 3; i < nLen; i++ {
@@ -128,13 +147,25 @@ func sendBlocksBoard(tgID, rcvrID int64) {
 		if checkUsersNode(nodeID, userNodes) {
 			userBlockCount += blockPerNode
 			isUserNode := fmt.Sprintf("(Your node) %s", *(userNodes[nodeID]))
-			entries += fmt.Sprintf("`%s\n\r%v - %s\n\rBlocks mined: %v \n\r`\n\n", isUserNode, i+1, nodeID, blockPerNode)
+			entry += fmt.Sprintf("`%s\n\r%v - %s\n\rBlocks mined: %v \n\r`\n\n", isUserNode, i+1, nodeID, blockPerNode)
+			if len(entry) > 3800 {
+				entries = append(entries, entry)
+				entry = ""
+			}
 		}
 	}
 	header := fmt.Sprintf("🏆*Mining 🔨 LeaderBoard* (Max epoch: %v, Mined block: %v)\n\n\r `(Total Blocks mined by your nodes: %v)`\n\n",
 		global.HighestEpoch, totalBlockCount, userBlockCount)
-
-	msg := tgbotapi.NewMessage(rcvrID, header+entries)
-	msg.ParseMode = "markdown"
-	TgBot.Send(msg)
+	if len(entry) > 0 {
+		entries = append(entries, entry)
+	}
+	// iterate over msgs and send individual messages
+	for i, _entry := range entries {
+		if i == 0 {
+			_entry = header + _entry
+		}
+		msg := tgbotapi.NewMessage(rcvrID, _entry)
+		msg.ParseMode = "markdown"
+		TgBot.Send(msg)
+	}
 }
