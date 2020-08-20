@@ -80,7 +80,7 @@ func (d DataBaseType) AddUserNode(userID int64, nodeIDToName map[string]string) 
 		// add user's node in global.Users
 		global.Users[userID].Nodes[nodeID] = &nodeName
 	}
-	log.Logger.Debug(fmt.Sprintf("Node of %v:", userID), global.Users[userID].Nodes)
+	log.Logger.Trace(fmt.Sprintf("Node of %v:", userID), global.Users[userID].Nodes)
 	return nil
 }
 

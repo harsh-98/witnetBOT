@@ -10,7 +10,8 @@ import (
 
 func sendNodesStats(tgID int64, dbUser *UserType) {
 	nLen := len(dbUser.Nodes)
-	log.Logger.Debug(*dbUser)
+	log.Logger.Debugf("Sending nodestats for %v", tgID)
+	log.Logger.Trace(*dbUser)
 	if nLen == 0 {
 		msg := tgbotapi.NewMessage(tgID, "⛔️ No nodes added yet")
 		TgBot.Send(msg)

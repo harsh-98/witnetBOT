@@ -70,7 +70,7 @@ func (d DataBaseType) GetUsers() {
 	)
 	for rows.Next() {
 		err := rows.Scan(&userID, &tgUserName, &tgFirstName, &tgLastName, &isAdmin)
-		log.Logger.Infof("Adding nodes for userid: %v", userID)
+		// log.Logger.Infof("Adding nodes for userid: %v", userID)
 		if err == nil {
 			user := UserType{
 				UserID:    userID,
@@ -105,14 +105,14 @@ func (d DataBaseType) GetUsers() {
 
 			}
 			rows2.Close()
-			log.Logger.Debugf("%v", user)
+			log.Logger.Tracef("%v", user)
 			if isAdmin {
 				global.Admin = append(global.Admin, &user)
 			}
 			global.Users[user.UserID] = &user
 		}
-		log.Logger.Debugf("Len of users %v", len(global.Users))
 	}
+	log.Logger.Debugf("Len of users %v", len(global.Users))
 	rows.Close()
 }
 

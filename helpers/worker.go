@@ -307,9 +307,6 @@ func (witnet *WitnetConnector) ProcessBlocks(resp RespObj) (int, error) {
 					msg := tgbotapi.NewMessage(int64(user), fmt.Sprintf("`👌 #%v block was mined by your node: %s[%s]`", epoch, *nodeName, minerPkh))
 					msg.ParseMode = "markdown"
 					TgBot.Send(msg)
-					if int(epoch) > global.HighestEpoch {
-						global.HighestEpoch = int(epoch)
-					}
 				}
 			}
 		}
@@ -335,6 +332,9 @@ func saveMinerDetails(minerArray map[string]*MinerDetails) error {
 			}
 			if miner.Epochs[i] > highestEpoch {
 				highestEpoch = miner.Epochs[i]
+					if int(highestEpoch) > global.HighestEpoch {
+						global.HighestEpoch = int(highestEpoch)
+					}
 			}
 			//strconv.Itoa(123)
 			lastFiveEpochs += fmt.Sprintf("%v", miner.Epochs[i])
@@ -345,8 +345,8 @@ func saveMinerDetails(minerArray map[string]*MinerDetails) error {
 		rows = append(rows, []interface{}{minerPkh, highestEpoch, totalReward, epochsLen, lastFiveEpochs,
 			highestEpoch, totalReward, epochsLen, previousEpoch, lastFiveEpochs})
 	}
-	query := `INSERT INTO lightBlockchain (Miner, latestEpoch, reward, blockCount, lastXEpochs) VALUES(?, ?, ?, ?, ?) 
-	ON DUPLICATE KEY 
+	query := `INSERT INTO lightBlockchain (Miner, latestEpoch, reward, blockCount, lastXEpochs) VALUES(?, ?, ?, ?, ?)
+	ON DUPLICATE KEY
 	UPDATE latestEpoch=?, reward=reward+?, blockCount =  blockCount + ?, lastXEpochs = CONCAT(SUBSTRING_INDEX(lastXEpochs, ',', ?), ',', ?);`
 	return multipleInsert(query, rows)
 }
