@@ -154,8 +154,8 @@ func sendBlocksBoard(tgID, rcvrID int64) {
 			}
 		}
 	}
-	header := fmt.Sprintf("🏆*Mining 🔨 LeaderBoard* (Max epoch: %v, Mined block: %v)\n\n\r `(Total Blocks mined by your nodes: %v)`\n\n",
-		global.HighestEpoch, totalBlockCount, userBlockCount)
+	header := fmt.Sprintf("🏆*Mining 🔨 LeaderBoard* (Max epoch: %v, Mined block: %v)\n\n\r `(Total Blocks mined by your nodes: %v)\n(Nodes that minted atleast 1 block: %v)`\n\n",
+		global.HighestEpoch, totalBlockCount, userBlockCount, nLen)
 	if len(entry) > 0 {
 		entries = append(entries, entry)
 	}

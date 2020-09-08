@@ -91,12 +91,14 @@ func (w *WitnetConnector) updateReputationLB(resp RespObj) {
 	case map[string]interface{}:
 		nodeRepMap := make(map[string]*NodeRepDetails)
 		var nodeRepSort NodeRepSort
-		for nodeID, v := range result.(map[string]interface{}) { // use type assertion to loop over map[string]interface{}
+    stats := result.(map[string]interface{})["stats"].(map[string]interface{})
 
+		for nodeID, v := range stats { // use type assertion to loop over map[string]interface{}
+      nodeStats := v.(map[string]interface{})
 			n := NodeRepDetails{
 				NodeID:     nodeID,
-				Active:     v.([]interface{})[1].(bool),
-				Reputation: v.([]interface{})[0].(float64),
+				Active:     nodeStats["is_active"].(bool),
+				Reputation: nodeStats["reputation"].(float64),
 			}
 			if global.NodeRepMap[nodeID] == nil {
 				notifyNodeHasReputation(nodeID)
@@ -137,8 +139,8 @@ func QueryWorker() {
 
 func queryWitnet() {
 	witnet.Address = Config.GetString("servAddr")
-	resp := witnet.QueryRPC(`{"jsonrpc": "2.0","method": "getReputationAll", "id": "1"}`)
-	witnet.updateReputationLB(resp)
+  resp := witnet.QueryRPC(`{"jsonrpc": "2.0","method": "getReputationAll", "id": "1"}`)
+  witnet.updateReputationLB(resp)
 	queryBlockchain()
 	GetNodeBlk()
 
