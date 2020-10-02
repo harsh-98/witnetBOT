@@ -133,6 +133,7 @@ func GenerateGraph(tgID int64) error {
 		log.Logger.Errorf("Error fetching rating from DB: %s\n\r", err)
 		return err
 	}
+  defer rows.Close()
 	var (
 		nodeID       string
 		createdAtStr string
