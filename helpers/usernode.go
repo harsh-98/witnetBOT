@@ -17,7 +17,7 @@ type UserNode struct {
 
 func (d DataBaseType) RemoveUserNode(nodeID string, userID int64) error {
 	// safe query
-	_, err := sqldb.Query("delete from userNodeMap where NodeID=? and UserID=?", nodeID, userID)
+	_, err := sqldb.Exec("delete from userNodeMap where NodeID=? and UserID=?", nodeID, userID)
 	// log.Logger.Debug(str)
 	if err != nil {
 		log.Logger.Error("Error removing node from DB")
@@ -186,7 +186,7 @@ func (d DataBaseType) NameNode(message *tgbotapi.Message, nodeID string) {
 		return
 	}
 	// safe query
-	_, err := sqldb.Query("update userNodeMap set NodeName=? where NodeID=? and UserID=?;", nodeName, nodeID, userID)
+	_, err := sqldb.Exec("update userNodeMap set NodeName=? where NodeID=? and UserID=?;", nodeName, nodeID, userID)
 	var msg tgbotapi.MessageConfig
 	var failed string
 	if err != nil {

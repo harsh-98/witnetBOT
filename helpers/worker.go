@@ -150,10 +150,11 @@ func GetNodeBlk() error {
 	// safe query
 	query := "select blockCount , Miner, lastXEpochs, reward from lightBlockchain  order by blockCount desc;"
 	rows, err := sqldb.Query(query)
-	if err != nil {
+  if err != nil {
 		log.Logger.Error("Err in querying lightblockchain", err)
 		return err
 	}
+  defer rows.Close()
 	var blockCount int64
 	var reward float64
 	var miner, lastXEpochs string
@@ -190,6 +191,7 @@ func queryBlockchain() {
 			log.Logger.Errorf("Error fetching epoch from blockchain: %s\n\r", err)
 			return
 		}
+    defer rows.Close()
 
 		var epoch, limit int
 		limit = Config.GetInt("blockchainLimitPerQuery")
@@ -208,7 +210,7 @@ func queryBlockchain() {
 		log.Logger.Debug(epochQuery)
 		resp := witnet.QueryRPC(epochQuery)
 		if resp.Error != nil {
-			log.Logger.Error(resp.Error.(string))
+			log.Logger.Error(fmt.Sprintf("%+v", resp.Error))
 			return
 		}
 		count, err := witnet.ProcessBlocks(resp)
@@ -267,7 +269,7 @@ func (witnet *WitnetConnector) ProcessBlocks(resp RespObj) (int, error) {
 		resp := witnet.QueryRPCBlock(blockQuery)
 		// if querying block resulted in error
 		if resp.Error != nil {
-			return 0, errors.New(resp.Error.(string))
+			return 0, errors.New(fmt.Sprintf("%+v",resp.Error))
 		}
 		// TODO handle multiple miners of the block
 		// minerTxns := resp.Result.Txs.Mint.Outputs

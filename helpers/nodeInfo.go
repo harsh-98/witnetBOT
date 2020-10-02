@@ -90,6 +90,7 @@ func sendNodeDetails(tgID int64, nodeID string) {
 		msg := tgbotapi.NewMessage(tgID, "⛔️ Fetching details for Node resulted in error")
 		TgBot.Send(msg)
 	}
+  defer rows.Close()
 	var (
 		blockCount  int
 		lastXEpochs string
@@ -98,7 +99,6 @@ func sendNodeDetails(tgID int64, nodeID string) {
 	for rows.Next() {
 		rows.Scan(&blockCount, &reward, &lastXEpochs)
 	}
-	rows.Close()
 	str += fmt.Sprintf("`BlockMinted: %v\n\rBlock submitted last 5 Epochs: %s\n\rBlock rewards : %v\n\r`",
 		blockCount, strings.Trim(lastXEpochs, ","), reward)
 	msg := tgbotapi.NewMessage(tgID, str)

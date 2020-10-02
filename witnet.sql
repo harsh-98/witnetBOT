@@ -49,6 +49,11 @@ CREATE TABLE lightBlockchain (
 	lastXEpochs varchar(200)
 );
 
+CREATE TABLE genesis (
+	NodeID  varchar(50) NOT NULL PRIMARY KEY,
+	Wits float,
+	Timelock INTEGER
+);
 
 CREATE TABLE userNodeMap (
 	UserID int,
@@ -78,7 +83,7 @@ ALTER TABLE witnet.userNodeMap MODIFY COLUMN NodeName VARCHAR(255)
 
 -- select SUBSTRING_INDEX(lastXEpochs,',', -2) from lightBlockchain;
 
--- INSERT INTO lightBlockchain (Miner, latestEpoch, reward, blockCount, lastXEpochs) VALUES(?, ?, ?, ?, ?) 
+-- INSERT INTO lightBlockchain (Miner, latestEpoch, reward, blockCount, lastXEpochs) VALUES(?, ?, ?, ?, ?)
 -- ON DUPLICATE KEY UPDATE latestEpoch=?, reward=reward+?, blockCount =  blockCount + ?, lastXEpochs = CONCAT_WS(SUBSTRING_INDEX(lastXEpochs, ',', ?), ?, ',');
 
 -- select * from
@@ -99,7 +104,9 @@ ALTER TABLE witnet.userNodeMap MODIFY COLUMN NodeName VARCHAR(255)
 -- GRANT ALL PRIVILEGES ON witnet.* TO 'network'@'localhost' WITH GRANT OPTION;
 
 -- checking character set of the table column
--- SELECT character_set_name FROM information_schema.`COLUMNS` 
+-- SELECT character_set_name FROM information_schema.`COLUMNS`
 -- WHERE table_schema = "witnet"
 --   AND table_name = "tblUsers"
 --   AND column_name = "FirstName";
+
+--  select * from lightBlockchain where Miner in (select n.NodeID from tblUsers join userNodeMap n where tblUsers.UserId=n.UserID and tblUsers.UserID="87747997"); -- blocks minted by a user

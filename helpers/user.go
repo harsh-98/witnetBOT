@@ -29,8 +29,10 @@ func GetUserByTelegramID(tgID int64) (*UserType, error) {
 }
 
 func (d DataBaseType) AddUser(u *UserType) error {
+	// Too many connections is query returns rows which must be closed or use Exec
+	//https://github.com/go-sql-driver/mysql/issues/111
 	// safe query
-	_, err := sqldb.Query("insert into tblUsers values (?, ?, ?, ?, 0)", u.UserID, u.UserName, u.FirstName, u.LastName)
+	_, err := sqldb.Exec("insert into tblUsers values (?, ?, ?, ?, 0)", u.UserID, u.UserName, u.FirstName, u.LastName)
 	if err != nil {
 		log.Logger.Errorf("Error adding user to DB: %s\n\r", err)
 		return err
@@ -61,6 +63,7 @@ func (d DataBaseType) GetUsers() {
 		log.Logger.Errorf("Error fetching users from DB: %s\n\r", err)
 		return
 	}
+	defer rows.Close()
 	var (
 		userID      int64
 		tgUserName  string
@@ -104,7 +107,7 @@ func (d DataBaseType) GetUsers() {
 				}
 
 			}
-			rows2.Close()
+			defer rows2.Close()
 			log.Logger.Tracef("%v", user)
 			if isAdmin {
 				global.Admin = append(global.Admin, &user)
@@ -113,12 +116,11 @@ func (d DataBaseType) GetUsers() {
 		}
 	}
 	log.Logger.Debugf("Len of users %v", len(global.Users))
-	rows.Close()
 }
 
 func (d DataBaseType) UpdateUser(u *UserType) error {
 	// safe query
-	_, err := sqldb.Query("update tblUsers set UserName=?, FirstName=?, LastName=? where UserID=?",
+	_, err := sqldb.Exec("update tblUsers set UserName=?, FirstName=?, LastName=? where UserID=?",
 		u.UserName, u.FirstName, u.LastName, u.UserID)
 	return err
 }
