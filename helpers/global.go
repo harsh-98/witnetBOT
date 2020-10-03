@@ -20,7 +20,7 @@ type Global struct {
 	// highest epoch registered by the bot
 	HighestEpoch int
 	// genesis reward
-	Genesis map[string]GenesisReward
+	Genesis map[string]*TestnetReward
 }
 
 // map is nil by default, not like array which is initialized as empty
@@ -33,7 +33,7 @@ var global = Global{
 	BlocksLB:     NodeBlkSort{},
 	Admin:        []*UserType{},
 	NodeUsers:    make(map[string][]int64),
-	Genesis:      make(map[string]TestnetReward),
+	Genesis:      make(map[string]*TestnetReward),
 }
 
 var TIMEFORMAT = "2006-01-02 15:04:05"

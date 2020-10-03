@@ -56,6 +56,7 @@ func (d DataBaseType) Init() error {
 	}
 	d.GetUsers()
 	d.GetNodeRep()
+	GetGenesisRewards()
 	GetNodeBlk()
 	return nil
 }

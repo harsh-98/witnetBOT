@@ -59,6 +59,10 @@ func CallbackQueryReceived(cb *tgbotapi.CallbackQuery) {
 		TgBot.Send(msg)
 		return
 	}
+	if cb.Data == "GenesisReward" {
+		TgBot.AnswerCallbackQuery(tgbotapi.NewCallback(cb.ID, "Fetching result"))
+		GenesisReward(int64(cb.From.ID))
+	}
 	if cb.Data == "RatingGraph" {
 		TgBot.AnswerCallbackQuery(tgbotapi.NewCallback(cb.ID, "Downloading. Please Wait !"))
 		if !Config.GetBool("disableGraph") {
@@ -245,6 +249,9 @@ func mainMenu(tgUser *tgbotapi.User) {
 			),
 			tgbotapi.NewInlineKeyboardRow(
 				tgbotapi.NewInlineKeyboardButtonData("🔨 Mining Leader Board 🏆", "BlockBoard"),
+			),
+			tgbotapi.NewInlineKeyboardRow(
+				tgbotapi.NewInlineKeyboardButtonData("🤑 Testnet Rewards", "GenesisReward"),
 			),
 			tgbotapi.NewInlineKeyboardRow(
 				tgbotapi.NewInlineKeyboardButtonData("📈 Get Rating graph", "RatingGraph"),
