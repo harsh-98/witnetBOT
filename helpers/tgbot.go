@@ -12,7 +12,7 @@ import (
 const welcomeMessage = "Hello\n\r\n\r" +
 	"I am @elliotsenpai 's unofficial witnet monitor BOT and I am here to help you keep an eye on your nodes."
 const nodeNameLength = 50
-const addNodeMsg = "Node's public key: Starts with twit (Testnet: Len 43) or wit(Mainnet: Len 42). \n\n" +
+const addNodeMsg = "Node's public key: Starts with wit(Mainnet: Len 42). \n\n" +
 	"You can also enter multiple keys separated by space.\n\n" +
 	"For naming your node provide name separated by comma(name length should be less than 50).\n\n" +
 	" Example: nodeID1,nodeName1 nodeID2,nodeName2"

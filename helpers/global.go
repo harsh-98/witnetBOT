@@ -21,6 +21,8 @@ type Global struct {
 	HighestEpoch int
 	// genesis reward
 	Genesis map[string]*TestnetReward
+	// genesis unlock period map
+	GenesisUnlock map[int64][]UnlockReward
 }
 
 // map is nil by default, not like array which is initialized as empty
@@ -37,5 +39,6 @@ var global = Global{
 }
 
 var TIMEFORMAT = "2006-01-02 15:04:05"
+var RFC822Z     = "02 Jan 2006 15:04"
 
 var Config *viper.Viper
