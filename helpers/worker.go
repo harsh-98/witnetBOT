@@ -1,6 +1,7 @@
 package helpers
 
 import (
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -9,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/btcsuite/btcutil/bech32"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/harsh-98/witnetBOT/log"
 )
@@ -233,7 +235,16 @@ type RespObjBlock struct {
 }
 
 type Block struct {
-	Txs TxTypes `json:"txns" yaml:"txns"`
+	Txs      TxTypes      `json:"txns" yaml:"txns"`
+	BlockSig BlockSigType `json:"block_sig"`
+}
+type BlockSigType struct {
+	PublicKey PublicKeyType `json:"public_key"`
+}
+
+type PublicKeyType struct {
+	Bytes      []byte `json:"bytes"`
+	Compressed byte   `json:"compressed"`
 }
 type TxTypes struct {
 	Mint Mint `json:"mint" yaml:"mint"`
@@ -248,6 +259,24 @@ type Transaction struct {
 type MinerDetails struct {
 	Reward float64
 	Epochs []int64
+}
+
+func publicKeyToAddress(pk PublicKeyType) string {
+	var publicKeyByte []byte
+	publicKeyByte = append(publicKeyByte, pk.Compressed)
+	publicKeyByte = append(publicKeyByte, pk.Bytes...)
+	hash := sha256.Sum256(publicKeyByte)
+	bech32Byte, err := bech32.ConvertBits(hash[:20], 8, 5, true)
+	if err != nil {
+		log.Logger.Fatal("Error:", err)
+		return ""
+	}
+	encoded, err := bech32.Encode("wit", bech32Byte)
+	if err != nil {
+		log.Logger.Fatal("Error:", err)
+		return ""
+	}
+	return encoded
 }
 
 // returns numberofminers, error
@@ -277,9 +306,13 @@ func (witnet *WitnetConnector) ProcessBlocks(resp RespObj) (int, error) {
 		// 	pkh := transaction.Pkh
 		// 	value := transaction.Value
 		// }
-		transaction := resp.Result.Txs.Mint.Outputs[0]
-		pkh := transaction.Pkh
-		reward := transaction.Value
+		pkh := publicKeyToAddress(resp.Result.BlockSig.PublicKey)
+		var reward float64
+		for _, transaction := range resp.Result.Txs.Mint.Outputs {
+			if transaction.Pkh == pkh {
+				reward += transaction.Value
+			}
+		}
 		minerPtr := minerArray[pkh]
 		if minerPtr != nil {
 			minerPtr.Epochs = append(minerPtr.Epochs, epoch)
