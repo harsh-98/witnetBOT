@@ -126,7 +126,8 @@ func addNodes(message *tgbotapi.Message) {
 	}
 	// handle invalid keys
 	for _, key := range keys {
-		if !(len(key) == 43 && strings.HasPrefix(key, "twit")) && !(len(key) == 42 && strings.HasPrefix(key, "wit")) {
+		// if !(len(key) == 43 && strings.HasPrefix(key, "twit")) && !(len(key) == 42 && strings.HasPrefix(key, "wit")) {
+		if !(len(key) == 42 && strings.HasPrefix(key, "wit")) {
 			msg := tgbotapi.NewMessage(int64(message.From.ID), fmt.Sprintf("⛔️ Invalid key %s \n Either wrong length or prefix ", key))
 			TgBot.Send(msg)
 			return

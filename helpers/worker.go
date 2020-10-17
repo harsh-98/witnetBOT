@@ -91,10 +91,10 @@ func (w *WitnetConnector) updateReputationLB(resp RespObj) {
 	case map[string]interface{}:
 		nodeRepMap := make(map[string]*NodeRepDetails)
 		var nodeRepSort NodeRepSort
-    stats := result.(map[string]interface{})["stats"].(map[string]interface{})
+		stats := result.(map[string]interface{})["stats"].(map[string]interface{})
 
 		for nodeID, v := range stats { // use type assertion to loop over map[string]interface{}
-      nodeStats := v.(map[string]interface{})
+			nodeStats := v.(map[string]interface{})
 			n := NodeRepDetails{
 				NodeID:     nodeID,
 				Active:     nodeStats["is_active"].(bool),
@@ -139,8 +139,8 @@ func QueryWorker() {
 
 func queryWitnet() {
 	witnet.Address = Config.GetString("servAddr")
-  resp := witnet.QueryRPC(`{"jsonrpc": "2.0","method": "getReputationAll", "id": "1"}`)
-  witnet.updateReputationLB(resp)
+	resp := witnet.QueryRPC(`{"jsonrpc": "2.0","method": "getReputationAll", "id": "1"}`)
+	witnet.updateReputationLB(resp)
 	queryBlockchain()
 	GetNodeBlk()
 
@@ -150,11 +150,11 @@ func GetNodeBlk() error {
 	// safe query
 	query := "select blockCount , Miner, lastXEpochs, reward from lightBlockchain  order by blockCount desc;"
 	rows, err := sqldb.Query(query)
-  if err != nil {
+	if err != nil {
 		log.Logger.Error("Err in querying lightblockchain", err)
 		return err
 	}
-  defer rows.Close()
+	defer rows.Close()
 	var blockCount int64
 	var reward float64
 	var miner, lastXEpochs string
@@ -191,7 +191,7 @@ func queryBlockchain() {
 			log.Logger.Errorf("Error fetching epoch from blockchain: %s\n\r", err)
 			return
 		}
-    defer rows.Close()
+		defer rows.Close()
 
 		var epoch, limit int
 		limit = Config.GetInt("blockchainLimitPerQuery")
@@ -269,7 +269,7 @@ func (witnet *WitnetConnector) ProcessBlocks(resp RespObj) (int, error) {
 		resp := witnet.QueryRPCBlock(blockQuery)
 		// if querying block resulted in error
 		if resp.Error != nil {
-			return 0, errors.New(fmt.Sprintf("%+v",resp.Error))
+			return 0, errors.New(fmt.Sprintf("%+v", resp.Error))
 		}
 		// TODO handle multiple miners of the block
 		// minerTxns := resp.Result.Txs.Mint.Outputs
@@ -336,9 +336,9 @@ func saveMinerDetails(minerArray map[string]*MinerDetails) error {
 			}
 			if miner.Epochs[i] > highestEpoch {
 				highestEpoch = miner.Epochs[i]
-					if int(highestEpoch) > global.HighestEpoch {
-						global.HighestEpoch = int(highestEpoch)
-					}
+				if int(highestEpoch) > global.HighestEpoch {
+					global.HighestEpoch = int(highestEpoch)
+				}
 			}
 			//strconv.Itoa(123)
 			lastFiveEpochs += fmt.Sprintf("%v", miner.Epochs[i])

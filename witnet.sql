@@ -34,7 +34,7 @@ CREATE TABLE reputation (
 	-- FOREIGN KEY (NodeID) REFERENCES tblNodes(NodeID)
 );
 
-CREATE TABLE blockchain (
+CREATE TABLE SuperBlockWaitList (
 	Epoch INTEGER NOT NULL PRIMARY KEY,
 	Miner  varchar(50),
 	reward INTEGER,
@@ -49,10 +49,11 @@ CREATE TABLE lightBlockchain (
 	lastXEpochs varchar(200)
 );
 
-CREATE TABLE genesis (
-	NodeID  varchar(50) NOT NULL PRIMARY KEY,
-	Wits float,
-	Timelock INTEGER
+CREATE TABLE genesis (NodeID  varchar(50) NOT NULL PRIMARY KEY,Wits varchar(50),Timelock varchar(50));
+
+CREATE TABLE genesisUnlockNotify (
+	notifyTimeStamp integer,
+	notified boolean
 );
 
 CREATE TABLE userNodeMap (

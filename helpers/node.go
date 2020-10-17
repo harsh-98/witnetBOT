@@ -53,7 +53,7 @@ func (d DataBaseType) GetNodeRep() error {
 		log.Logger.Errorf("Error fetching nodes from DB: %s\n\r", err)
 		return nil
 	}
-  defer rows.Close()
+	defer rows.Close()
 	var (
 		nodeID     string
 		active     bool
@@ -92,6 +92,18 @@ func notifyNodeHasReputation(nodeID string) {
 		for _, userID := range userIDs {
 			nodeName := global.Users[int64(userID)].Nodes[nodeID]
 			msg := tgbotapi.NewMessage(int64(userID), fmt.Sprintf("`🥂Your node %s[%s] is added in reputation list.`", *nodeName, nodeID))
+			msg.ParseMode = "markdown"
+			TgBot.Send(msg)
+		}
+	}
+}
+
+func notifyUsersGensisUnlock(msgTemplate, nodeID string) {
+	userIDs := global.NodeUsers[nodeID]
+	if userIDs != nil {
+		for _, userID := range userIDs {
+			nodeName := global.Users[int64(userID)].Nodes[nodeID]
+			msg := tgbotapi.NewMessage(int64(userID), fmt.Sprintf(msgTemplate+" for node %s[%s]", *nodeName, nodeID))
 			msg.ParseMode = "markdown"
 			TgBot.Send(msg)
 		}
